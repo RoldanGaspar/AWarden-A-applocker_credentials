@@ -18,12 +18,9 @@ import {
   Wallet,
   FileText,
   CheckCircle,
-  Plus,
   ArrowUpRight,
-  ArrowDownLeft,
   Lock,
   Clock,
-  HardDrive,
   Copy,
   Check,
   AlertTriangle,
@@ -41,9 +38,20 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { Card, Button, Tag, FAB, SectionHeader, EmptyState } from '../../components/ui';
+import {
+  Card,
+  Button,
+  Tag,
+  FAB,
+  SectionHeader,
+  EmptyState,
+  AWardenMark,
+  AnimatedPatternBackground,
+  ScreenEntrance,
+} from '../../components/ui';
 import { QuickActionsModal } from '../../components/dashboard/QuickActionsModal';
 import { dbService } from '../../services/db';
 import { VaultItem, Transaction, Task, DashboardStats } from '../../types/models';
@@ -52,6 +60,7 @@ export const DashboardScreen: React.FC = () => {
   const router = useRouter();
   const { colors, accent, spacing, typography, radius, isDark } = useTheme();
   const { masterKey, lockNow } = useAuth();
+  const isFocused = useIsFocused();
 
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<DashboardStats>({
@@ -166,7 +175,13 @@ export const DashboardScreen: React.FC = () => {
           style={[styles.banner, { backgroundColor: colors.warningBg, borderColor: colors.warning, borderWidth: 1 }]}
         >
           <View style={styles.bannerRow}>
-            <View style={[styles.bannerIconBox, { backgroundColor: colors.bgElevated, borderRadius: radius.md }]}>
+            <View style={[styles.bannerAccent, { backgroundColor: colors.warning }]} />
+            <View
+              style={[
+                styles.bannerIconBox,
+                { backgroundColor: colors.bgElevated, borderColor: colors.borderSubtle, borderRadius: radius.md },
+              ]}
+            >
               <AlertTriangle size={22} color={colors.warning} />
             </View>
             <View style={styles.bannerText}>
@@ -205,7 +220,13 @@ export const DashboardScreen: React.FC = () => {
         ]}
       >
         <View style={styles.bannerRow}>
-          <View style={[styles.bannerIconBox, { backgroundColor: colors.bgElevated, borderRadius: radius.md }]}>
+          <View style={[styles.bannerAccent, { backgroundColor: isStale ? colors.warning : colors.success }]} />
+          <View
+            style={[
+              styles.bannerIconBox,
+              { backgroundColor: colors.bgElevated, borderColor: colors.borderSubtle, borderRadius: radius.md },
+            ]}
+          >
             {isStale ? (
               <AlertTriangle size={22} color={colors.warning} />
             ) : (
@@ -234,7 +255,8 @@ export const DashboardScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenEntrance style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <AnimatedPatternBackground intensity={0.35} active={isFocused} />
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { padding: spacing.lg }]}
         refreshControl={
@@ -247,7 +269,7 @@ export const DashboardScreen: React.FC = () => {
       >
         {/* 1. Greeting Header */}
         <View style={styles.topHeader}>
-          <View>
+          <View style={styles.greetingTextContainer}>
             <Text
               style={[styles.greeting, { color: colors.textPrimary, fontSize: typography.xl }]}
               accessibilityRole="header"
@@ -260,19 +282,12 @@ export const DashboardScreen: React.FC = () => {
           </View>
           <View
             style={[
-              styles.securityBadge,
-              { backgroundColor: accent.primaryBgDark, borderColor: accent.primary },
+              styles.mascotBadgeContainer,
+              { backgroundColor: colors.bgCard, borderColor: colors.borderSubtle },
             ]}
           >
-            <ShieldCheck size={16} color={accent.primary} />
-            <Text
-              style={[
-                styles.securityBadgeText,
-                { color: accent.primary, fontSize: typography.xs, marginLeft: 4 },
-              ]}
-            >
-              Vault Active
-            </Text>
+            <AWardenMark size={46} />
+            <View style={[styles.mascotStatusDot, { backgroundColor: colors.success, borderColor: colors.bgPrimary }]} />
           </View>
         </View>
 
@@ -289,16 +304,38 @@ export const DashboardScreen: React.FC = () => {
             accessibilityLabel={`Monthly net balance: ₱${stats.netBalance.toLocaleString()}`}
           >
             <View style={styles.kpiHeader}>
-              <View style={[styles.kpiIcon, { backgroundColor: colors.successBg, borderRadius: radius.md }]}>
+              <View
+                style={[
+                  styles.kpiIcon,
+                  {
+                    backgroundColor: colors.successBg,
+                    borderColor: colors.surfaceHighlight,
+                    borderRadius: radius.md,
+                  },
+                ]}
+              >
                 <Wallet size={20} color={colors.success} />
               </View>
-              <Tag label="This Month" size="sm" />
+              <View style={styles.kpiHeaderMeta}>
+                <Tag label="This Month" size="sm" />
+                <View
+                  style={[
+                    styles.kpiAction,
+                    { backgroundColor: colors.bgSecondary, borderColor: colors.borderSubtle, borderRadius: radius.full },
+                  ]}
+                >
+                  <ArrowUpRight size={14} color={colors.textTertiary} />
+                </View>
+              </View>
             </View>
-            <Text style={[styles.kpiValue, { color: colors.textPrimary, fontSize: typography.xl, marginTop: spacing.sm }]}>
+            <Text style={[styles.kpiValue, { color: colors.textPrimary, fontSize: typography.xl, marginTop: spacing.md }]}>
               ₱{stats.netBalance.toLocaleString()}
             </Text>
-            <Text style={[styles.kpiLabel, { color: colors.textTertiary, fontSize: typography.xs, marginTop: 2 }]}>
+            <Text style={[styles.kpiLabel, { color: colors.textSecondary, fontSize: typography.sm, marginTop: spacing.xs }]}>
               Net Balance
+            </Text>
+            <Text style={[styles.kpiDetail, { color: colors.textMuted, fontSize: typography.xs, marginTop: spacing.xs }]}>
+              Income less expenses
             </Text>
           </Card>
 
@@ -310,15 +347,35 @@ export const DashboardScreen: React.FC = () => {
             accessibilityLabel={`Vault credentials: ${stats.vaultCount} items`}
           >
             <View style={styles.kpiHeader}>
-              <View style={[styles.kpiIcon, { backgroundColor: accent.primaryBgLight, borderRadius: radius.md }]}>
+              <View
+                style={[
+                  styles.kpiIcon,
+                  {
+                    backgroundColor: accent.primaryBgLight,
+                    borderColor: colors.surfaceHighlight,
+                    borderRadius: radius.md,
+                  },
+                ]}
+              >
                 <Lock size={20} color={accent.primary} />
               </View>
+              <View
+                style={[
+                  styles.kpiAction,
+                  { backgroundColor: colors.bgSecondary, borderColor: colors.borderSubtle, borderRadius: radius.full },
+                ]}
+              >
+                <ArrowUpRight size={14} color={colors.textTertiary} />
+              </View>
             </View>
-            <Text style={[styles.kpiValue, { color: colors.textPrimary, fontSize: typography.xl, marginTop: spacing.sm }]}>
+            <Text style={[styles.kpiValue, { color: colors.textPrimary, fontSize: typography.xl, marginTop: spacing.md }]}>
               {stats.vaultCount}
             </Text>
-            <Text style={[styles.kpiLabel, { color: colors.textTertiary, fontSize: typography.xs, marginTop: 2 }]}>
+            <Text style={[styles.kpiLabel, { color: colors.textSecondary, fontSize: typography.sm, marginTop: spacing.xs }]}>
               Vault Credentials
+            </Text>
+            <Text style={[styles.kpiDetail, { color: colors.textMuted, fontSize: typography.xs, marginTop: spacing.xs }]}>
+              Protected locally
             </Text>
           </Card>
         </View>
@@ -332,15 +389,35 @@ export const DashboardScreen: React.FC = () => {
             accessibilityLabel={`Active tasks: ${stats.openTasksCount}`}
           >
             <View style={styles.kpiHeader}>
-              <View style={[styles.kpiIcon, { backgroundColor: colors.warningBg, borderRadius: radius.md }]}>
+              <View
+                style={[
+                  styles.kpiIcon,
+                  {
+                    backgroundColor: colors.warningBg,
+                    borderColor: colors.surfaceHighlight,
+                    borderRadius: radius.md,
+                  },
+                ]}
+              >
                 <CheckCircle size={20} color={colors.warning} />
               </View>
+              <View
+                style={[
+                  styles.kpiAction,
+                  { backgroundColor: colors.bgSecondary, borderColor: colors.borderSubtle, borderRadius: radius.full },
+                ]}
+              >
+                <ArrowUpRight size={14} color={colors.textTertiary} />
+              </View>
             </View>
-            <Text style={[styles.kpiValue, { color: colors.textPrimary, fontSize: typography.xl, marginTop: spacing.sm }]}>
+            <Text style={[styles.kpiValue, { color: colors.textPrimary, fontSize: typography.xl, marginTop: spacing.md }]}>
               {stats.openTasksCount}
             </Text>
-            <Text style={[styles.kpiLabel, { color: colors.textTertiary, fontSize: typography.xs, marginTop: 2 }]}>
+            <Text style={[styles.kpiLabel, { color: colors.textSecondary, fontSize: typography.sm, marginTop: spacing.xs }]}>
               Active Tasks
+            </Text>
+            <Text style={[styles.kpiDetail, { color: colors.textMuted, fontSize: typography.xs, marginTop: spacing.xs }]}>
+              Due & in progress
             </Text>
           </Card>
 
@@ -352,15 +429,35 @@ export const DashboardScreen: React.FC = () => {
             accessibilityLabel={`Safe notes: ${stats.notesCount}`}
           >
             <View style={styles.kpiHeader}>
-              <View style={[styles.kpiIcon, { backgroundColor: colors.infoBg, borderRadius: radius.md }]}>
+              <View
+                style={[
+                  styles.kpiIcon,
+                  {
+                    backgroundColor: colors.infoBg,
+                    borderColor: colors.surfaceHighlight,
+                    borderRadius: radius.md,
+                  },
+                ]}
+              >
                 <FileText size={20} color={colors.info} />
               </View>
+              <View
+                style={[
+                  styles.kpiAction,
+                  { backgroundColor: colors.bgSecondary, borderColor: colors.borderSubtle, borderRadius: radius.full },
+                ]}
+              >
+                <ArrowUpRight size={14} color={colors.textTertiary} />
+              </View>
             </View>
-            <Text style={[styles.kpiValue, { color: colors.textPrimary, fontSize: typography.xl, marginTop: spacing.sm }]}>
+            <Text style={[styles.kpiValue, { color: colors.textPrimary, fontSize: typography.xl, marginTop: spacing.md }]}>
               {stats.notesCount}
             </Text>
-            <Text style={[styles.kpiLabel, { color: colors.textTertiary, fontSize: typography.xs, marginTop: 2 }]}>
+            <Text style={[styles.kpiLabel, { color: colors.textSecondary, fontSize: typography.sm, marginTop: spacing.xs }]}>
               Safe Notes
+            </Text>
+            <Text style={[styles.kpiDetail, { color: colors.textMuted, fontSize: typography.xs, marginTop: spacing.xs }]}>
+              Private workspace
             </Text>
           </Card>
         </View>
@@ -602,7 +699,7 @@ export const DashboardScreen: React.FC = () => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
           setQuickActionModalVisible(true);
         }}
-        accessibilityLabel="Open Quick Actions menu"
+        accessibilityLabel="Open Quick Capture"
       />
 
       {/* Quick Actions Bottom Sheet Modal */}
@@ -613,7 +710,7 @@ export const DashboardScreen: React.FC = () => {
           loadDashboardData();
         }}
       />
-    </View>
+    </ScreenEntrance>
   );
 };
 
@@ -622,13 +719,35 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 90,
+    paddingBottom: 132,
   },
   topHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 20,
+  },
+  greetingTextContainer: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  mascotBadgeContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  mascotStatusDot: {
+    position: 'absolute',
+    right: 2,
+    bottom: 3,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
   },
   greeting: {
     fontWeight: '800',
@@ -648,12 +767,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   banner: {
-    padding: 14,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 14,
   },
   bannerRow: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  bannerAccent: {
+    width: 4,
+    alignSelf: 'stretch',
+    minHeight: 42,
+    borderRadius: 2,
+    marginRight: 10,
   },
   bannerIconBox: {
     width: 40,
@@ -661,6 +787,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
+    borderWidth: 1,
   },
   bannerText: {
     flex: 1,
@@ -672,23 +799,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   kpiCard: {
-    padding: 16,
+    padding: 18,
+    minHeight: 150,
   },
   kpiHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  kpiHeaderMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   kpiIcon: {
-    width: 36,
-    height: 36,
+    width: 42,
+    height: 42,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+  },
+  kpiAction: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
   },
   kpiValue: {
     fontWeight: '800',
   },
   kpiLabel: {
+    fontWeight: '700',
+  },
+  kpiDetail: {
     fontWeight: '500',
   },
   feedRow: {

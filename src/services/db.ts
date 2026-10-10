@@ -35,6 +35,14 @@ import {
   DashboardStats,
 } from '../types/models';
 
+export interface DemoDataSeedResult {
+  vaultItems: number;
+  transactions: number;
+  notes: number;
+  tasks: number;
+  total: number;
+}
+
 export * from '../types/models';
 
 class DatabaseService {
@@ -199,6 +207,345 @@ class DatabaseService {
     }
   }
 
+  /**
+   * Add a repeatable set of local-only records for UI previews.
+   * Demo records use stable IDs and INSERT OR IGNORE so this is additive and idempotent.
+   * Encrypted fields still use the active vault key, just like normal user-created data.
+   */
+  async seedDemoData(encryptionKey: string): Promise<DemoDataSeedResult> {
+    if (!encryptionKey) {
+      throw new Error('Encryption key is required to load demo data');
+    }
+
+    const db = await this.getDB();
+    await this.seedDefaults(db);
+
+    const now = Date.now();
+    const today = new Date(now);
+    const currentMonthDate = (day: number) => {
+      const date = new Date(today);
+      date.setDate(1);
+      const daysInMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+      date.setDate(Math.min(Math.max(day, 1), daysInMonth));
+      return date.toISOString().split('T')[0];
+    };
+    const relativeDate = (offset: number) => {
+      const date = new Date(today);
+      date.setDate(date.getDate() + offset);
+      return date.toISOString().split('T')[0];
+    };
+
+    const counts = {
+      vaultItems: 0,
+      transactions: 0,
+      notes: 0,
+      tasks: 0,
+    };
+
+    const demoVaultItems = [
+      {
+        id: 'demo_vault_workspace',
+        folderId: 'folder_work_vault',
+        title: 'Demo GitHub Workspace',
+        username: 'demo.user@awarden.local',
+        password: 'Demo-GitHub-2026!xQ',
+        url: 'https://github.com',
+        notes: 'Sample credential for previewing the vault card and detail view.',
+        tags: ['Demo', 'Work'],
+        isFavorite: true,
+      },
+      {
+        id: 'demo_vault_streaming',
+        folderId: 'folder_personal_vault',
+        title: 'Demo Streaming Account',
+        username: 'demo.viewer@awarden.local',
+        password: 'Sample-Stream-88!zP',
+        url: 'https://open.spotify.com',
+        notes: 'Safe placeholder data only. This is not a real account.',
+        tags: ['Demo', 'Personal'],
+        isFavorite: false,
+      },
+      {
+        id: 'demo_vault_bank',
+        folderId: 'folder_finance_vault',
+        title: 'Demo Bank Portal',
+        username: 'demo.account@awarden.local',
+        password: 'Sample-Bank-44!mR',
+        url: 'https://example.com/banking',
+        notes: 'Placeholder banking login for layout testing.',
+        tags: ['Demo', 'Finance'],
+        isFavorite: true,
+      },
+    ];
+
+    const demoTransactions = [
+      {
+        id: 'demo_tx_salary',
+        type: 'income' as TransactionType,
+        amount: 48000,
+        categoryId: 'cat_salary',
+        date: currentMonthDate(2),
+        payeeOrSource: 'Demo Company Payroll',
+        note: 'Sample monthly salary income.',
+        isRecurring: true,
+        recurringFrequency: 'monthly',
+      },
+      {
+        id: 'demo_tx_freelance',
+        type: 'income' as TransactionType,
+        amount: 12000,
+        categoryId: 'cat_freelance',
+        date: currentMonthDate(4),
+        payeeOrSource: 'Demo Freelance Client',
+        note: 'Sample side-project payment.',
+        isRecurring: false,
+        recurringFrequency: null,
+      },
+      {
+        id: 'demo_tx_housing',
+        type: 'expense' as TransactionType,
+        amount: 18000,
+        categoryId: 'cat_housing',
+        date: currentMonthDate(3),
+        payeeOrSource: 'Demo Apartment Rent',
+        note: 'Sample housing expense.',
+        isRecurring: true,
+        recurringFrequency: 'monthly',
+      },
+      {
+        id: 'demo_tx_food',
+        type: 'expense' as TransactionType,
+        amount: 1250,
+        categoryId: 'cat_food',
+        date: currentMonthDate(5),
+        payeeOrSource: 'Weekend Market',
+        note: 'Sample groceries and dining expense.',
+        isRecurring: false,
+        recurringFrequency: null,
+      },
+      {
+        id: 'demo_tx_transport',
+        type: 'expense' as TransactionType,
+        amount: 680,
+        categoryId: 'cat_transport',
+        date: currentMonthDate(6),
+        payeeOrSource: 'City Transit',
+        note: 'Sample transportation expense.',
+        isRecurring: false,
+        recurringFrequency: null,
+      },
+      {
+        id: 'demo_tx_entertainment',
+        type: 'expense' as TransactionType,
+        amount: 899,
+        categoryId: 'cat_entertainment',
+        date: currentMonthDate(7),
+        payeeOrSource: 'Demo Music Subscription',
+        note: 'Sample recurring entertainment expense.',
+        isRecurring: true,
+        recurringFrequency: 'monthly',
+      },
+      {
+        id: 'demo_tx_shopping',
+        type: 'expense' as TransactionType,
+        amount: 2450,
+        categoryId: 'cat_shopping',
+        date: currentMonthDate(8),
+        payeeOrSource: 'Home Office Refresh',
+        note: 'Sample personal shopping expense.',
+        isRecurring: false,
+        recurringFrequency: null,
+      },
+    ];
+
+    const demoNotes = [
+      {
+        id: 'demo_note_reset',
+        folderId: 'folder_personal_notes',
+        title: 'Demo Monthly Reset',
+        content: '# Monthly reset\n\n- Review this month\'s spending\n- Refresh the backup\n- Pick three priorities for next month\n\n> Demo content for previewing markdown notes.',
+        isPinned: true,
+        isFavorite: true,
+        tags: ['Demo', 'Planning'],
+      },
+      {
+        id: 'demo_note_project',
+        folderId: 'folder_ideas_notes',
+        title: 'Demo Product Ideas',
+        content: '## Product ideas\n\n1. Simplify the first-run experience\n2. Add a visual weekly review\n3. Keep every interaction local-first\n\n#ideas #demo',
+        isPinned: false,
+        isFavorite: true,
+        tags: ['Demo', 'Ideas'],
+      },
+      {
+        id: 'demo_note_trip',
+        folderId: 'folder_personal_notes',
+        title: 'Demo Weekend Plan',
+        content: 'A short sample note with enough copy to preview card wrapping, tags, and the editor surface.',
+        isPinned: false,
+        isFavorite: false,
+        tags: ['Demo', 'Personal'],
+      },
+    ];
+
+    const demoTasks = [
+      {
+        id: 'demo_task_review',
+        title: 'Review monthly spending',
+        description: 'Compare the sample ledger entries with this month\'s budget limits.',
+        status: 'in_progress' as TaskStatus,
+        priority: 'high' as TaskPriority,
+        dueDate: relativeDate(1),
+        completedAt: null,
+        tags: ['Demo', 'Finance'],
+      },
+      {
+        id: 'demo_task_backup',
+        title: 'Create encrypted backup',
+        description: 'Export a fresh local backup after reviewing the sample records.',
+        status: 'todo' as TaskStatus,
+        priority: 'high' as TaskPriority,
+        dueDate: relativeDate(3),
+        completedAt: null,
+        tags: ['Demo', 'Security'],
+      },
+      {
+        id: 'demo_task_autopay',
+        title: 'Move recurring bills to autopay',
+        description: 'A medium-priority task to demonstrate longer card text and metadata.',
+        status: 'todo' as TaskStatus,
+        priority: 'medium' as TaskPriority,
+        dueDate: relativeDate(5),
+        completedAt: null,
+        tags: ['Demo', 'Admin'],
+      },
+      {
+        id: 'demo_task_archive',
+        title: 'Archive old receipts',
+        description: 'Completed sample task for the workflow board.',
+        status: 'completed' as TaskStatus,
+        priority: 'low' as TaskPriority,
+        dueDate: relativeDate(-2),
+        completedAt: now - 2 * 60 * 60 * 1000,
+        tags: ['Demo', 'Cleanup'],
+      },
+      {
+        id: 'demo_task_plan',
+        title: 'Plan the next weekly review',
+        description: 'Use the notes and ledger screens to prepare a calm weekly reset.',
+        status: 'in_progress' as TaskStatus,
+        priority: 'medium' as TaskPriority,
+        dueDate: relativeDate(7),
+        completedAt: null,
+        tags: ['Demo', 'Planning'],
+      },
+      {
+        id: 'demo_task_domain',
+        title: 'Renew workspace domain',
+        description: 'Sample upcoming task with a compact title.',
+        status: 'todo' as TaskStatus,
+        priority: 'low' as TaskPriority,
+        dueDate: relativeDate(10),
+        completedAt: null,
+        tags: ['Demo', 'Work'],
+      },
+    ];
+
+    await db.withTransactionAsync(async () => {
+      for (const item of demoVaultItems) {
+        const result = await db.runAsync(
+          `INSERT OR IGNORE INTO vault_items
+           (id, folder_id, title, username, password, url, notes, tags, is_favorite, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+          [
+            item.id,
+            item.folderId,
+            item.title,
+            CryptoService.encryptData(item.username, encryptionKey),
+            CryptoService.encryptData(item.password, encryptionKey),
+            item.url,
+            CryptoService.encryptData(item.notes, encryptionKey),
+            JSON.stringify(item.tags),
+            item.isFavorite ? 1 : 0,
+            now - 1000,
+            now - 1000,
+          ]
+        );
+        counts.vaultItems += result.changes;
+      }
+
+      for (const item of demoTransactions) {
+        const result = await db.runAsync(
+          `INSERT OR IGNORE INTO transactions
+           (id, type, amount, currency, category_id, date, payee_or_source, note, is_recurring, recurring_frequency, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+          [
+            item.id,
+            item.type,
+            item.amount,
+            'PHP',
+            item.categoryId,
+            item.date,
+            item.payeeOrSource,
+            CryptoService.encryptData(item.note, encryptionKey),
+            item.isRecurring ? 1 : 0,
+            item.recurringFrequency,
+            now,
+          ]
+        );
+        counts.transactions += result.changes;
+      }
+
+      for (const item of demoNotes) {
+        const result = await db.runAsync(
+          `INSERT OR IGNORE INTO notes
+           (id, folder_id, title, content, is_pinned, is_favorite, tags, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+          [
+            item.id,
+            item.folderId,
+            item.title,
+            CryptoService.encryptData(item.content, encryptionKey),
+            item.isPinned ? 1 : 0,
+            item.isFavorite ? 1 : 0,
+            JSON.stringify(item.tags),
+            now,
+            now,
+          ]
+        );
+        counts.notes += result.changes;
+      }
+
+      for (const item of demoTasks) {
+        const result = await db.runAsync(
+          `INSERT OR IGNORE INTO tasks
+           (id, title, description, status, priority, due_date, completed_at, tags, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+          [
+            item.id,
+            item.title,
+            item.description ? CryptoService.encryptData(item.description, encryptionKey) : null,
+            item.status,
+            item.priority,
+            item.dueDate,
+            item.completedAt,
+            JSON.stringify(item.tags),
+            now,
+          ]
+        );
+        counts.tasks += result.changes;
+      }
+    });
+
+    await this.setSetting('demo_data_loaded_at', String(now));
+    await this.addAuditLog('demo_data_loaded', 'demo_data', 'demo_preview');
+
+    return {
+      ...counts,
+      total: counts.vaultItems + counts.transactions + counts.notes + counts.tasks,
+    };
+  }
+
   private async getDB(): Promise<SQLite.SQLiteDatabase> {
     if (!this.db) {
       return await this.init();
@@ -241,13 +588,13 @@ class DatabaseService {
     const [vaultCountRow, notesCountRow, tasksCountRow, transRows, backupRow, nameRow] = await Promise.all([
       db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM vault_items;'),
       db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM notes;'),
-      db.getFirstAsync<{ count: number }>('SELECT COUNT(*) as count FROM tasks WHERE status != "completed";'),
+      db.getFirstAsync<{ count: number }>(`SELECT COUNT(*) as count FROM tasks WHERE status != 'completed';`),
       db.getAllAsync<{ type: 'income' | 'expense'; total: number }>(
         'SELECT type, SUM(amount) as total FROM transactions WHERE date LIKE ? GROUP BY type;',
         [`${currentMonth}%`]
       ),
-      db.getFirstAsync<{ value: string }>('SELECT value FROM app_settings WHERE key = "last_backup_timestamp";'),
-      db.getFirstAsync<{ value: string }>('SELECT value FROM app_settings WHERE key = "user_display_name";'),
+      db.getFirstAsync<{ value: string }>(`SELECT value FROM app_settings WHERE key = 'last_backup_timestamp';`),
+      db.getFirstAsync<{ value: string }>(`SELECT value FROM app_settings WHERE key = 'user_display_name';`),
     ]);
 
     let totalIncome = 0;
@@ -329,7 +676,7 @@ class DatabaseService {
 
     const rows = await db.getAllAsync<any>(
       `SELECT * FROM tasks
-       WHERE status != "completed"
+       WHERE status != 'completed'
        ORDER BY CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC, priority DESC
        LIMIT ?;`,
       [limit]
@@ -805,13 +1152,13 @@ class DatabaseService {
     const db = await this.getDB();
 
     const categories = await db.getAllAsync<Category>(
-      'SELECT * FROM categories WHERE type = "expense" AND monthly_budget_limit > 0;'
+      `SELECT * FROM categories WHERE type = 'expense' AND monthly_budget_limit > 0;`
     );
 
     const spentRows = await db.getAllAsync<{ category_id: string; total: number }>(
       `SELECT category_id, SUM(amount) as total
        FROM transactions
-       WHERE type = "expense" AND date LIKE ?
+       WHERE type = 'expense' AND date LIKE ?
        GROUP BY category_id;`,
       [`${monthPrefix}%`]
     );
@@ -854,7 +1201,7 @@ class DatabaseService {
       `SELECT t.category_id, c.name as category_name, c.color as category_color, c.icon as category_icon, SUM(t.amount) as total
        FROM transactions t
        LEFT JOIN categories c ON t.category_id = c.id
-       WHERE t.type = "expense" AND t.date LIKE ?
+       WHERE t.type = 'expense' AND t.date LIKE ?
        GROUP BY t.category_id
        ORDER BY total DESC;`,
       [`${monthPrefix}%`]
@@ -1186,7 +1533,7 @@ class DatabaseService {
     if (filters?.dueRange && filters.dueRange !== 'all') {
       const today = new Date().toISOString().split('T')[0];
       if (filters.dueRange === 'overdue') {
-        query += ' AND due_date < ? AND status != "completed"';
+        query += ` AND due_date < ? AND status != 'completed'`;
         params.push(today);
       } else if (filters.dueRange === 'today') {
         query += ' AND due_date = ?';
@@ -1197,7 +1544,7 @@ class DatabaseService {
       }
     }
 
-    query += ' ORDER BY CASE status WHEN "todo" THEN 1 WHEN "in_progress" THEN 2 ELSE 3 END, CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC, priority DESC;';
+    query += ` ORDER BY CASE status WHEN 'todo' THEN 1 WHEN 'in_progress' THEN 2 ELSE 3 END, CASE WHEN due_date IS NULL THEN 1 ELSE 0 END, due_date ASC, priority DESC;`;
 
     const rows = await db.getAllAsync<any>(query, params);
 

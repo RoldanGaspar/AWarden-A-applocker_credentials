@@ -27,9 +27,10 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { Input, Tag, FAB, EmptyState, Card } from '../../components/ui';
+import { Input, Tag, FAB, EmptyState, Card, AnimatedPatternBackground, ScreenEntrance } from '../../components/ui';
 import {
   NoteCard,
   NoteEditor,
@@ -42,6 +43,7 @@ import { Note, Folder } from '../../types/models';
 export const NotesScreen: React.FC = () => {
   const { colors, accent, spacing, typography, radius } = useTheme();
   const { masterKey } = useAuth();
+  const isFocused = useIsFocused();
 
   const [notes, setNotes] = useState<Note[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -152,7 +154,8 @@ export const NotesScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenEntrance style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <AnimatedPatternBackground intensity={0.35} active={isFocused} />
       {/* Top Header Controls */}
       <View style={[styles.topBar, { paddingHorizontal: spacing.lg, paddingTop: spacing.md }]}>
         <Input
@@ -384,14 +387,14 @@ export const NotesScreen: React.FC = () => {
         }
         ListEmptyComponent={
           <EmptyState
-            icon={<FileText size={48} color={accent.primary} />}
-            title={hasActiveFilters ? 'No Matching Notes' : 'No Safe Notes Yet'}
+            owlMood="curious"
+            title={hasActiveFilters ? 'No Matching Notes' : 'No Safe Scrolls Penned'}
             description={
               hasActiveFilters
-                ? 'Try clearing active filters or adjusting your search query.'
-                : 'Write daily journals, code snippets, and confidential documentation with AES-256 encryption.'
+                ? 'AWarden found no notes matching your search or tags.'
+                : 'Penned ideas, journals, and confidential documentation stay encrypted under AWarden’s watch.'
             }
-            actionTitle={hasActiveFilters ? 'Clear Filters' : 'Create First Note'}
+            actionTitle={hasActiveFilters ? 'Clear Filters' : 'Pen First Note'}
             onActionPress={hasActiveFilters ? clearAllFilters : () => {
               setEditingNote(null);
               setIsEditorOpen(true);
@@ -473,7 +476,7 @@ export const NotesScreen: React.FC = () => {
           setSelectedTag(tag);
         }}
       />
-    </View>
+    </ScreenEntrance>
   );
 };
 

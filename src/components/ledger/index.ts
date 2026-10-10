@@ -5,3 +5,4 @@ export * from './BudgetProgressBar';
 export * from './DonutChart';
 export * from './GroupedBarChart';
 export * from './InsightsPanel';
+export * from './VirtualAccountCard';

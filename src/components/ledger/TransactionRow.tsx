@@ -8,7 +8,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Alert,
 } from 'react-native';
 import {
@@ -19,7 +18,7 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
-import { Card, Tag } from '../ui';
+import { AnimatedPressable } from '../ui';
 import { renderCategoryIconHelper } from './CategoryManagerModal';
 import { Transaction } from '../../types/models';
 
@@ -60,10 +59,9 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   const catColor = transaction.categoryColor || (isIncome ? colors.success : colors.danger);
 
   return (
-    <TouchableOpacity
+    <AnimatedPressable
       onPress={onPress}
       onLongPress={handleLongPress}
-      activeOpacity={0.7}
       style={[
         styles.container,
         {
@@ -134,7 +132,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
           {transaction.date}
         </Text>
       </View>
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 };
 

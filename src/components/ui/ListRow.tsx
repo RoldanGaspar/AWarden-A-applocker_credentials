@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  TouchableOpacity,
   View,
   Text,
   StyleSheet,
@@ -10,6 +9,7 @@ import {
 import { ChevronRight } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
+import { AnimatedPressable } from './AnimatedPressable';
 
 export interface ListRowProps {
   title: string;
@@ -116,14 +116,13 @@ export const ListRow: React.FC<ListRowProps> = ({
 
   if (isInteractive) {
     return (
-      <TouchableOpacity
+      <AnimatedPressable
         onPress={handlePress}
-        activeOpacity={0.7}
         accessibilityRole="button"
         accessibilityLabel={`${title}${subtitle ? `, ${subtitle}` : ''}`}
       >
         {content}
-      </TouchableOpacity>
+      </AnimatedPressable>
     );
   }
 

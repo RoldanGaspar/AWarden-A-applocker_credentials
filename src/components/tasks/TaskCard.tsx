@@ -8,7 +8,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Alert,
 } from 'react-native';
 import {
@@ -27,7 +26,7 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
-import { Card, Tag } from '../ui';
+import { Card, Tag, AnimatedPressable } from '../ui';
 import { Task, TaskPriority, TaskStatus } from '../../types/models';
 
 export interface TaskCardProps {
@@ -94,8 +93,9 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   const renderStatusButton = () => {
     if (task.status === 'todo') {
       return (
-        <TouchableOpacity
-          onPress={() => {
+        <AnimatedPressable
+          onPress={(event) => {
+            event.stopPropagation();
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
             onStatusChange('in_progress');
           }}
@@ -104,14 +104,15 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           accessibilityLabel="Start task"
         >
           <Play size={12} color={colors.textSecondary} style={{ marginLeft: 1 }} />
-        </TouchableOpacity>
+        </AnimatedPressable>
       );
     }
 
     if (task.status === 'in_progress') {
       return (
-        <TouchableOpacity
-          onPress={() => {
+        <AnimatedPressable
+          onPress={(event) => {
+            event.stopPropagation();
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
             onStatusChange('completed');
           }}
@@ -120,13 +121,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           accessibilityLabel="Complete task"
         >
           <Check size={14} color={colors.success} />
-        </TouchableOpacity>
+        </AnimatedPressable>
       );
     }
 
     return (
-      <TouchableOpacity
-        onPress={() => {
+      <AnimatedPressable
+        onPress={(event) => {
+          event.stopPropagation();
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
           onStatusChange('todo');
         }}
@@ -135,7 +137,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         accessibilityLabel="Reopen task"
       >
         <RotateCcw size={12} color={colors.textTertiary} />
-      </TouchableOpacity>
+      </AnimatedPressable>
     );
   };
 
@@ -150,14 +152,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           opacity: task.status === 'completed' ? 0.75 : 1,
         },
       ]}
-      onPress={onPress}
       accessibilityLabel={`Task: ${task.title}, priority: ${task.priority}, status: ${task.status}`}
     >
-      <TouchableOpacity
+      <AnimatedPressable
         onLongPress={handleLongPress}
-        activeOpacity={0.8}
         style={styles.innerTouchable}
         onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Task: ${task.title}, priority: ${task.priority}, status: ${task.status}`}
       >
         <View style={styles.headerRow}>
           {/* Priority pill */}
@@ -236,7 +238,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             </View>
           )}
         </View>
-      </TouchableOpacity>
+      </AnimatedPressable>
     </Card>
   );
 };

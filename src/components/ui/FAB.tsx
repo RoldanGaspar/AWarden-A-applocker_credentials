@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  TouchableOpacity,
+  Platform,
   Text,
   StyleSheet,
   ViewStyle,
@@ -9,7 +9,9 @@ import {
 } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
+import { AnimatedPressable } from './AnimatedPressable';
 
 export interface FABProps {
   onPress: () => void;
@@ -20,6 +22,13 @@ export interface FABProps {
   accessibilityLabel?: string;
 }
 
+type WebFabStyle = ViewStyle & {
+  boxShadow?: string;
+};
+
+const FLOATING_TAB_BAR_HEIGHT = 70;
+const FLOATING_TAB_BAR_GAP = 12;
+
 export const FAB: React.FC<FABProps> = ({
   onPress,
   icon,
@@ -28,7 +37,8 @@ export const FAB: React.FC<FABProps> = ({
   labelStyle,
   accessibilityLabel = 'Quick Add Action',
 }) => {
-  const { accent, radius, shadows, spacing, typography } = useTheme();
+  const { accent, colors, radius, spacing, typography } = useTheme();
+  const insets = useSafeAreaInsets();
 
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
@@ -36,32 +46,61 @@ export const FAB: React.FC<FABProps> = ({
   };
 
   const isExtended = !!label;
+  const bottomOffset =
+    Math.max(insets.bottom, spacing.sm) + FLOATING_TAB_BAR_HEIGHT + FLOATING_TAB_BAR_GAP;
+  const shadowStyle: WebFabStyle =
+    Platform.OS === 'web'
+      ? {
+          boxShadow: `8px 10px 18px ${colors.surfaceShadow}, -5px -5px 12px ${colors.surfaceHighlight}`,
+        }
+      : {
+          shadowColor: colors.surfaceShadow,
+          shadowOffset: { width: 5, height: 7 },
+          shadowOpacity: 0.3,
+          shadowRadius: 11,
+          elevation: 10,
+        };
 
   return (
-    <TouchableOpacity
+    <AnimatedPressable
       onPress={handlePress}
       style={[
         styles.fab,
         {
-          backgroundColor: accent.primary,
+          backgroundColor: colors.bgCard,
           borderRadius: isExtended ? radius.xl : radius.full,
-          paddingHorizontal: isExtended ? spacing.lg : spacing.md,
-          ...shadows.elevated,
+          borderTopColor: colors.surfaceHighlight,
+          borderLeftColor: colors.surfaceHighlight,
+          borderRightColor: colors.surfaceShadow,
+          borderBottomColor: colors.surfaceShadow,
+          bottom: bottomOffset,
+          paddingHorizontal: isExtended ? spacing.sm : 0,
         },
+        shadowStyle,
         style,
       ]}
-      activeOpacity={0.85}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityHint="Opens the add menu"
     >
       <View style={styles.contentRow}>
-        {icon || <Plus size={24} color="#FFFFFF" />}
+        <View
+          style={[
+            styles.fabCore,
+            {
+              backgroundColor: accent.primary,
+              borderColor: accent.primaryHover,
+            },
+          ]}
+        >
+          {icon || <Plus size={26} color={accent.contrastText} strokeWidth={2.7} />}
+        </View>
         {label && (
           <Text
             style={[
               styles.label,
               {
-                color: '#FFFFFF',
+                color: accent.primary,
                 fontSize: typography.base,
                 marginLeft: spacing.sm,
               },
@@ -72,20 +111,29 @@ export const FAB: React.FC<FABProps> = ({
           </Text>
         )}
       </View>
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 };
 
 const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
-    bottom: 24,
     right: 20,
-    minHeight: 56,
-    minWidth: 56,
+    minHeight: 64,
+    minWidth: 64,
+    paddingVertical: 7,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 99,
+  },
+  fabCore: {
+    width: 48,
+    height: 48,
+    borderRadius: 9999,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   contentRow: {
     flexDirection: 'row',

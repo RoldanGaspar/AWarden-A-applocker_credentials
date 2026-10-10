@@ -2,9 +2,11 @@ import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { Button } from './Button';
+import { OwlMascot, OwlMood } from './OwlMascot';
 
 export interface EmptyStateProps {
-  icon: React.ReactNode;
+  icon?: React.ReactNode;
+  owlMood?: OwlMood;
   title: string;
   description: string;
   actionTitle?: string;
@@ -14,6 +16,7 @@ export interface EmptyStateProps {
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
   icon,
+  owlMood,
   title,
   description,
   actionTitle,
@@ -24,14 +27,24 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
   return (
     <View style={[styles.container, { padding: spacing.xl }, style]}>
-      <View
-        style={[
-          styles.iconBox,
-          { backgroundColor: colors.bgSecondary, borderRadius: radius.xl, marginBottom: spacing.md },
-        ]}
-      >
-        {icon}
-      </View>
+      {owlMood ? (
+        <View style={{ marginBottom: spacing.md }}>
+          <OwlMascot size={78} mood={owlMood} />
+        </View>
+      ) : icon ? (
+        <View
+          style={[
+            styles.iconBox,
+            { backgroundColor: colors.bgSecondary, borderRadius: radius.xl, marginBottom: spacing.md },
+          ]}
+        >
+          {icon}
+        </View>
+      ) : (
+        <View style={{ marginBottom: spacing.md }}>
+          <OwlMascot size={78} mood="curious" />
+        </View>
+      )}
       <Text
         style={[
           styles.title,

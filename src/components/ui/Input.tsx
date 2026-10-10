@@ -3,7 +3,6 @@ import {
   View,
   TextInput,
   Text,
-  TouchableOpacity,
   StyleSheet,
   TextInputProps,
   ViewStyle,
@@ -11,6 +10,8 @@ import {
 } from 'react-native';
 import { Eye, EyeOff, XCircle } from 'lucide-react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { NeomorphicSurface } from './NeomorphicSurface';
+import { AnimatedPressable } from './AnimatedPressable';
 
 export interface InputProps extends Omit<TextInputProps, 'style'> {
   label?: string;
@@ -23,6 +24,7 @@ export interface InputProps extends Omit<TextInputProps, 'style'> {
   containerStyle?: ViewStyle;
   inputStyle?: TextStyle;
   labelStyle?: TextStyle;
+  onTogglePasswordVisibility?: (visible: boolean) => void;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -40,6 +42,9 @@ export const Input: React.FC<InputProps> = ({
   onChangeText,
   placeholder,
   editable = true,
+  onFocus,
+  onBlur,
+  onTogglePasswordVisibility,
   ...restProps
 }) => {
   const { colors, accent, radius, spacing, typography } = useTheme();
@@ -78,7 +83,9 @@ export const Input: React.FC<InputProps> = ({
         </Text>
       )}
 
-      <View
+      <NeomorphicSurface
+        variant="inset"
+        padding={0}
         style={[
           styles.inputContainer,
           {
@@ -98,8 +105,14 @@ export const Input: React.FC<InputProps> = ({
           placeholderTextColor={colors.textMuted}
           secureTextEntry={isPassword && !showPassword}
           editable={editable}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
+          onFocus={(e) => {
+            setIsFocused(true);
+            if (onFocus) onFocus(e);
+          }}
+          onBlur={(e) => {
+            setIsFocused(false);
+            if (onBlur) onBlur(e);
+          }}
           style={[
             styles.input,
             {
@@ -114,19 +127,25 @@ export const Input: React.FC<InputProps> = ({
         />
 
         {clearable && !!value && (
-          <TouchableOpacity
+          <AnimatedPressable
             onPress={handleClear}
             style={[styles.actionButton, { minWidth: spacing.minTouchTarget, minHeight: spacing.minTouchTarget }]}
             accessibilityRole="button"
             accessibilityLabel="Clear input"
           >
             <XCircle size={18} color={colors.textMuted} />
-          </TouchableOpacity>
+          </AnimatedPressable>
         )}
 
         {isPassword && (
-          <TouchableOpacity
-            onPress={() => setShowPassword(!showPassword)}
+          <AnimatedPressable
+            onPress={() => {
+              const nextState = !showPassword;
+              setShowPassword(nextState);
+              if (onTogglePasswordVisibility) {
+                onTogglePasswordVisibility(nextState);
+              }
+            }}
             style={[styles.actionButton, { minWidth: spacing.minTouchTarget, minHeight: spacing.minTouchTarget }]}
             accessibilityRole="button"
             accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
@@ -136,13 +155,13 @@ export const Input: React.FC<InputProps> = ({
             ) : (
               <Eye size={20} color={colors.textSecondary} />
             )}
-          </TouchableOpacity>
+          </AnimatedPressable>
         )}
 
         {rightIcon && !isPassword && !clearable && (
           <View style={[styles.iconRight, { paddingRight: spacing.md }]}>{rightIcon}</View>
         )}
-      </View>
+      </NeomorphicSurface>
 
       {hasError ? (
         <Text

@@ -8,7 +8,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
 } from 'react-native';
 import {
   Plus,
@@ -20,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { TaskCard } from './TaskCard';
 import { Task, TaskStatus } from '../../types/models';
+import { AnimatedPressable } from '../ui/AnimatedPressable';
 
 export interface SwimlaneProps {
   status: TaskStatus;
@@ -76,7 +76,7 @@ export const Swimlane: React.FC<SwimlaneProps> = ({
           </View>
         </View>
 
-        <TouchableOpacity
+        <AnimatedPressable
           onPress={() => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
             onAddTask(status);
@@ -86,7 +86,7 @@ export const Swimlane: React.FC<SwimlaneProps> = ({
           accessibilityLabel={`Add task to ${title}`}
         >
           <Plus size={16} color={accent.primary} />
-        </TouchableOpacity>
+        </AnimatedPressable>
       </View>
 
       {/* Task Cards List */}
@@ -94,7 +94,7 @@ export const Swimlane: React.FC<SwimlaneProps> = ({
         {tasks.length === 0 ? (
           <View style={[styles.emptyBox, { borderColor: colors.borderSubtle, borderRadius: radius.md }]}>
             <Text style={[styles.emptyText, { color: colors.textMuted, fontSize: typography.xs }]}>
-              No tasks in {title.toLowerCase()}
+              Perch is clear — no tasks in {title.toLowerCase()}
             </Text>
           </View>
         ) : (

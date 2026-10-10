@@ -1,19 +1,23 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   Modal as RNModal,
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   TouchableWithoutFeedback,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  useWindowDimensions,
   ViewStyle,
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useReducedMotion } from 'react-native-reanimated';
 import { useTheme } from '../../theme/ThemeContext';
+import { motion } from '../../theme/motion';
+import { AnimatedPressable } from './AnimatedPressable';
 
 export interface ModalProps {
   visible: boolean;
@@ -37,19 +41,113 @@ export const Modal: React.FC<ModalProps> = ({
   contentStyle,
 }) => {
   const { colors, radius, spacing, typography, shadows } = useTheme();
+  const { height } = useWindowDimensions();
+  const reduceMotion = useReducedMotion();
+  const isBottomSheet = variant === 'bottomSheet';
+  const [mounted, setMounted] = useState(visible);
+  const overlayOpacity = useRef(new Animated.Value(visible && !reduceMotion ? 0 : 1)).current;
+  const sheetProgress = useRef(new Animated.Value(visible && !reduceMotion ? 1 : 0)).current;
+  const dialogScale = useRef(new Animated.Value(visible && !reduceMotion ? 0.96 : 1)).current;
+  const useNativeDriver = Platform.OS !== 'web';
+
+  const sheetTranslateY = sheetProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, height],
+  });
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    if (reduceMotion) {
+      if (visible) {
+        overlayOpacity.setValue(1);
+        sheetProgress.setValue(0);
+        dialogScale.setValue(1);
+      } else {
+        setMounted(false);
+      }
+      return;
+    }
+
+    if (visible) {
+      overlayOpacity.setValue(0);
+      sheetProgress.setValue(isBottomSheet ? 1 : 0);
+      dialogScale.setValue(isBottomSheet ? 1 : 0.96);
+
+      const openAnimation = Animated.parallel([
+        Animated.timing(overlayOpacity, {
+          toValue: 1,
+          duration: motion.duration.backdrop,
+          useNativeDriver,
+        }),
+        isBottomSheet
+          ? Animated.timing(sheetProgress, {
+              toValue: 0,
+              duration: motion.duration.modal,
+              useNativeDriver,
+            })
+          : Animated.spring(dialogScale, {
+              toValue: 1,
+              useNativeDriver,
+              ...motion.spring,
+            }),
+      ]);
+
+      openAnimation.start();
+      return () => openAnimation.stop();
+    }
+
+    const closeAnimation = Animated.parallel([
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: motion.duration.close,
+        useNativeDriver,
+      }),
+      isBottomSheet
+        ? Animated.timing(sheetProgress, {
+            toValue: 1,
+            duration: motion.duration.close,
+            useNativeDriver,
+          })
+        : Animated.timing(dialogScale, {
+            toValue: 0.96,
+            duration: motion.duration.close,
+            useNativeDriver,
+          }),
+    ]);
+
+    closeAnimation.start(({ finished }) => {
+      if (finished) setMounted(false);
+    });
+
+    return () => closeAnimation.stop();
+  }, [
+    dialogScale,
+    isBottomSheet,
+    mounted,
+    overlayOpacity,
+    reduceMotion,
+    sheetProgress,
+    useNativeDriver,
+    visible,
+  ]);
 
   const handleClose = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     onClose();
   };
 
-  const isBottomSheet = variant === 'bottomSheet';
-
   return (
     <RNModal
-      visible={visible}
+      visible={mounted}
       transparent
-      animationType={isBottomSheet ? 'slide' : 'fade'}
+      animationType="none"
       onRequestClose={handleClose}
     >
       <KeyboardAvoidingView
@@ -57,9 +155,14 @@ export const Modal: React.FC<ModalProps> = ({
         style={styles.flex}
       >
         <TouchableWithoutFeedback onPress={handleClose}>
-          <View style={styles.overlay}>
+          <Animated.View
+            style={[
+              styles.overlay,
+              { opacity: overlayOpacity, justifyContent: isBottomSheet ? 'flex-end' : 'center' },
+            ]}
+          >
             <TouchableWithoutFeedback>
-              <View
+              <Animated.View
                 style={[
                   styles.dialog,
                   isBottomSheet
@@ -78,6 +181,9 @@ export const Modal: React.FC<ModalProps> = ({
                         ...shadows.elevated,
                       },
                   contentStyle,
+                  isBottomSheet
+                    ? { transform: [{ translateY: sheetTranslateY }] }
+                    : { transform: [{ scale: dialogScale }] },
                 ]}
               >
                 {/* Drag handle for bottom sheet */}
@@ -114,7 +220,7 @@ export const Modal: React.FC<ModalProps> = ({
                     </View>
 
                     {showCloseButton && (
-                      <TouchableOpacity
+                      <AnimatedPressable
                         onPress={handleClose}
                         style={[
                           styles.closeButton,
@@ -124,7 +230,7 @@ export const Modal: React.FC<ModalProps> = ({
                         accessibilityLabel="Close dialog"
                       >
                         <X size={20} color={colors.textSecondary} />
-                      </TouchableOpacity>
+                      </AnimatedPressable>
                     )}
                   </View>
                 )}
@@ -137,9 +243,9 @@ export const Modal: React.FC<ModalProps> = ({
                 >
                   {children}
                 </ScrollView>
-              </View>
+              </Animated.View>
             </TouchableWithoutFeedback>
-          </View>
+          </Animated.View>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
     </RNModal>
@@ -153,7 +259,6 @@ const styles = StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.65)',
-    justifyContent: 'flex-end',
   },
   dialog: {
     width: '100%',

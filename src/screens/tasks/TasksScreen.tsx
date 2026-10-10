@@ -25,9 +25,10 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { Input, Tag, FAB, Modal, EmptyState } from '../../components/ui';
+import { Input, Tag, FAB, Modal, EmptyState, AnimatedPatternBackground, ScreenEntrance } from '../../components/ui';
 import {
   TaskCard,
   TaskForm,
@@ -42,6 +43,7 @@ import { Task, TaskStatus, TaskPriority } from '../../types/models';
 export const TasksScreen: React.FC = () => {
   const { colors, accent, spacing, typography, radius } = useTheme();
   const { masterKey } = useAuth();
+  const isFocused = useIsFocused();
 
   const [activeTab, setActiveTab] = useState<'board' | 'calendar'>('board');
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -150,7 +152,8 @@ export const TasksScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenEntrance style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <AnimatedPatternBackground intensity={0.35} active={isFocused} />
       {/* Header Controls & View Mode Toggle */}
       <View style={[styles.topBar, { paddingHorizontal: spacing.lg, paddingTop: spacing.md }]}>
         <View style={styles.headerControlsRow}>
@@ -469,7 +472,7 @@ export const TasksScreen: React.FC = () => {
         selectedTag={selectedTag}
         onSelectTag={(tag) => setSelectedTag(tag)}
       />
-    </View>
+    </ScreenEntrance>
   );
 };
 

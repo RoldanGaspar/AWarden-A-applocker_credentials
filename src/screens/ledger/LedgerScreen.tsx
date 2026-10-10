@@ -30,15 +30,17 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { Card, Input, Tag, FAB, Modal, Button, EmptyState } from '../../components/ui';
+import { Card, Input, Tag, FAB, Modal, Button, EmptyState, AnimatedPatternBackground, ScreenEntrance } from '../../components/ui';
 import {
   TransactionRow,
   TransactionForm,
   CategoryManagerModal,
   BudgetProgressBar,
   InsightsPanel,
+  VirtualAccountCard,
 } from '../../components/ledger';
 import { dbService } from '../../services/db';
 import {
@@ -51,11 +53,17 @@ import {
 export const LedgerScreen: React.FC = () => {
   const { colors, accent, spacing, typography, radius } = useTheme();
   const { masterKey } = useAuth();
+  const isFocused = useIsFocused();
 
   const [activeTab, setActiveTab] = useState<'transactions' | 'insights'>('transactions');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [budgetOverview, setBudgetOverview] = useState<BudgetOverviewItem[]>([]);
+  const [accountSummary, setAccountSummary] = useState({
+    totalIncome: 0,
+    totalExpense: 0,
+    netBalance: 0,
+  });
   const [refreshing, setRefreshing] = useState(false);
 
   // Filters
@@ -68,6 +76,7 @@ export const LedgerScreen: React.FC = () => {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
+  const [defaultTransactionType, setDefaultTransactionType] = useState<TransactionType>('expense');
 
   const now = new Date();
   const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -76,7 +85,7 @@ export const LedgerScreen: React.FC = () => {
     if (!masterKey) return;
 
     try {
-      const [txList, catList, budgets] = await Promise.all([
+      const [txList, catList, budgets, summary] = await Promise.all([
         dbService.getTransactions(masterKey, {
           search: searchQuery,
           type: typeFilter,
@@ -85,11 +94,13 @@ export const LedgerScreen: React.FC = () => {
         }),
         dbService.getCategories(),
         dbService.getBudgetOverview(currentMonthPrefix),
+        dbService.getFinancialSummary(currentMonthPrefix),
       ]);
 
       setTransactions(txList);
       setCategories(catList);
       setBudgetOverview(budgets);
+      setAccountSummary(summary);
     } catch (e) {
       console.warn('Failed to load ledger data:', e);
     }
@@ -210,8 +221,25 @@ export const LedgerScreen: React.FC = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
   };
 
+  const openAddTransaction = (type: TransactionType) => {
+    setEditingTransaction(null);
+    setDefaultTransactionType(type);
+    setIsAddModalVisible(true);
+  };
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenEntrance style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <AnimatedPatternBackground intensity={0.35} active={isFocused} />
+      <View style={[styles.accountCardWrap, { paddingHorizontal: spacing.lg, paddingTop: spacing.sm }]}>
+        <VirtualAccountCard
+          balance={accountSummary.netBalance}
+          totalIncome={accountSummary.totalIncome}
+          totalExpense={accountSummary.totalExpense}
+          onAddIncome={() => openAddTransaction('income')}
+          onAddExpense={() => openAddTransaction('expense')}
+        />
+      </View>
+
       {/* Top Header Controls */}
       <View style={[styles.topBar, { paddingHorizontal: spacing.lg, paddingTop: spacing.md }]}>
         <View style={styles.headerControlsRow}>
@@ -478,15 +506,15 @@ export const LedgerScreen: React.FC = () => {
           }
           ListEmptyComponent={
             <EmptyState
-              icon={<Wallet size={48} color={accent.primary} />}
-              title={hasActiveFilters ? 'No Matching Records' : 'No Transactions Yet'}
+              owlMood="curious"
+              title={hasActiveFilters ? 'No Matching Records' : 'The Ledger is Blank'}
               description={
                 hasActiveFilters
-                  ? 'Try clearing active filters or adjusting search terms.'
-                  : 'Start tracking your daily expenses, monthly salary, and budget progress.'
+                  ? 'AWarden found no transactions matching your active filter criteria.'
+                  : 'Start recording your cash flows and category budgets under AWarden’s guardian ledger.'
               }
-              actionTitle={hasActiveFilters ? 'Clear Filters' : 'Add First Transaction'}
-              onActionPress={hasActiveFilters ? clearAllFilters : () => setIsAddModalVisible(true)}
+              actionTitle={hasActiveFilters ? 'Clear Filters' : 'Record First Transaction'}
+              onActionPress={hasActiveFilters ? clearAllFilters : () => openAddTransaction('expense')}
               style={{ marginTop: 40 }}
             />
           }
@@ -530,7 +558,7 @@ export const LedgerScreen: React.FC = () => {
       <FAB
         onPress={() => {
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-          setIsAddModalVisible(true);
+          openAddTransaction('expense');
         }}
         accessibilityLabel="Add new transaction"
       />
@@ -546,6 +574,7 @@ export const LedgerScreen: React.FC = () => {
         <TransactionForm
           onSave={handleCreateTransaction}
           onCancel={() => setIsAddModalVisible(false)}
+          defaultType={defaultTransactionType}
           submitButtonTitle="Save Transaction"
         />
       </Modal>
@@ -574,7 +603,7 @@ export const LedgerScreen: React.FC = () => {
         onClose={() => setIsCategoryModalVisible(false)}
         onCategoriesChanged={() => loadLedgerData()}
       />
-    </View>
+    </ScreenEntrance>
   );
 };
 
@@ -584,6 +613,9 @@ const styles = StyleSheet.create({
   },
   topBar: {
     paddingBottom: 4,
+  },
+  accountCardWrap: {
+    width: '100%',
   },
   headerControlsRow: {
     flexDirection: 'row',

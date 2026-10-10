@@ -1,6 +1,6 @@
 /**
- * Life OS & Vault - Lock Screen UI
- * Local-First, Zero-Cloud Master Password & Biometric Unlock Screen
+ * AWarden - Security Gate Lock Screen UI
+ * Local-First, Zero-Cloud Master Password & Biometric Unlock Screen with Interactive Owl Guardian Mascot
  */
 
 import React, { useState, useEffect } from 'react';
@@ -13,11 +13,11 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { ShieldCheck, Fingerprint, Lock, ShieldAlert, KeyRound } from 'lucide-react-native';
+import { Fingerprint, Lock, ShieldAlert, KeyRound, Sparkles } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../theme/ThemeContext';
-import { Button, Input, Card } from '../../components/ui';
+import { Button, Input, Card, AWardenMark, OwlMood, AnimatedPatternBackground } from '../../components/ui';
 
 export interface LockScreenProps {
   onGoToRecovery: () => void;
@@ -36,6 +36,9 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onGoToRecovery }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   // Trigger biometrics on mount if enabled
   useEffect(() => {
@@ -43,6 +46,15 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onGoToRecovery }) => {
       unlockWithBiometrics().catch(() => {});
     }
   }, [biometricsEnabled, biometricsAvailable]);
+
+  // Determine dynamic owl mascot mood
+  const getOwlMood = (): OwlMood => {
+    if (isSuccess || isLoading) return 'happy';
+    if (error) return 'alert';
+    if (isPasswordVisible && isInputFocused) return 'peeking';
+    if (isInputFocused || password.length > 0) return 'eyes_closed';
+    return 'awake';
+  };
 
   const handlePasswordUnlock = async () => {
     if (!password.trim()) {
@@ -60,6 +72,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onGoToRecovery }) => {
         setError('Incorrect master password');
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       } else {
+        setIsSuccess(true);
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
     } catch (e: any) {
@@ -75,6 +88,8 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onGoToRecovery }) => {
     const success = await unlockWithBiometrics();
     if (!success) {
       setError('Biometric authentication failed or canceled');
+    } else {
+      setIsSuccess(true);
     }
   };
 
@@ -83,26 +98,38 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onGoToRecovery }) => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.container, { backgroundColor: colors.bgPrimary }]}
     >
+      <AnimatedPatternBackground />
       <ScrollView
+        style={styles.contentLayer}
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: spacing.xl }]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header Branding */}
+        {/* Header AWarden Branding */}
         <View style={styles.header}>
-          <View
-            style={[
-              styles.iconWrapper,
-              { backgroundColor: accent.primaryBgDark, borderColor: accent.primary },
-            ]}
-          >
-            <ShieldCheck size={42} color={accent.primary} />
+          <View style={styles.owlWrapper}>
+            <AWardenMark size={120} />
           </View>
+
           <Text style={[styles.title, { color: colors.textPrimary, fontSize: typography.xxl }]}>
-            Life OS & Vault
+            AWarden Vault
           </Text>
           <Text style={[styles.subtitle, { color: colors.textTertiary, fontSize: typography.sm }]}>
-            Local-First • Zero-Cloud • AES-256
+            The Vigilant Guardian of Your Digital Life
           </Text>
+
+          {/* Micro-Interaction Status Pill */}
+          <View style={[styles.statusPill, { backgroundColor: colors.bgSecondary, borderColor: colors.borderSubtle }]}>
+            <Sparkles size={13} color={accent.primary} style={{ marginRight: 6 }} />
+            <Text style={[styles.statusText, { color: colors.textSecondary, fontSize: typography.xs }]}>
+              {getOwlMood() === 'eyes_closed'
+                ? "AWarden is looking away — your secret is safe."
+                : getOwlMood() === 'peeking'
+                ? "AWarden is peeking at revealed text."
+                : getOwlMood() === 'alert'
+                ? "Vigilance alert: verification failed."
+                : "Guardian on duty • Zero-Cloud Encrypted"}
+            </Text>
+          </View>
         </View>
 
         {/* Unlock Card */}
@@ -124,6 +151,9 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onGoToRecovery }) => {
               setPassword(text);
               if (error) setError('');
             }}
+            onFocus={() => setIsInputFocused(true)}
+            onBlur={() => setIsInputFocused(false)}
+            onTogglePasswordVisibility={(visible) => setIsPasswordVisible(visible)}
             isPassword
             leftIcon={<Lock size={18} color={colors.textSecondary} />}
             errorText={error}
@@ -132,7 +162,7 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onGoToRecovery }) => {
           />
 
           {failedAttempts > 2 && (
-            <View style={[styles.warningRow, { backgroundColor: colors.warningBg }]}>
+            <View style={[styles.warningRow, { backgroundColor: colors.warningBg, borderRadius: radius.sm }]}>
               <ShieldAlert size={16} color={colors.warning} />
               <Text
                 style={[
@@ -179,23 +209,16 @@ export const LockScreen: React.FC<LockScreenProps> = ({ onGoToRecovery }) => {
                 { color: colors.textSecondary, fontSize: typography.sm },
               ]}
             >
-              Forgot password? Use Recovery Code
+              Forgot password? Use recovery code
             </Text>
           </TouchableOpacity>
         </Card>
 
-        {/* Trust & Security Signals */}
-        <View style={styles.trustBadges}>
-          <View style={[styles.badge, { backgroundColor: colors.bgSecondary, borderRadius: radius.md }]}>
-            <Text style={[styles.badgeText, { color: colors.textTertiary, fontSize: typography.xs }]}>
-              🔒 Hardware Keystore Protected
-            </Text>
-          </View>
-          <View style={[styles.badge, { backgroundColor: colors.bgSecondary, borderRadius: radius.md }]}>
-            <Text style={[styles.badgeText, { color: colors.textTertiary, fontSize: typography.xs }]}>
-              🛡️ Zero Telemetry
-            </Text>
-          </View>
+        {/* Security badge footer */}
+        <View style={styles.footer}>
+          <Text style={[styles.footerText, { color: colors.textMuted, fontSize: typography.xs }]}>
+            Protected by PBKDF2-HMAC-SHA256 & AES-256-CBC
+          </Text>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -206,71 +229,77 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  contentLayer: {
+    zIndex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingVertical: 32,
+    paddingVertical: 36,
   },
   header: {
     alignItems: 'center',
     marginBottom: 24,
   },
-  iconWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    marginBottom: 16,
+  owlWrapper: {
+    marginBottom: 12,
   },
   title: {
     fontWeight: '800',
-    textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
     marginTop: 4,
-    textAlign: 'center',
+    fontWeight: '500',
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginTop: 10,
+  },
+  statusText: {
+    fontWeight: '600',
   },
   card: {
-    width: '100%',
-    maxWidth: 440,
-    alignSelf: 'center',
+    padding: 24,
+    marginBottom: 20,
   },
   cardTitle: {
     fontWeight: '700',
+    textAlign: 'center',
   },
   warningRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 10,
-    borderRadius: 8,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   warningText: {
-    fontWeight: '500',
+    fontWeight: '600',
+    flex: 1,
   },
   recoveryLink: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 18,
+    marginTop: 16,
+    paddingVertical: 4,
   },
   recoveryText: {
-    fontWeight: '500',
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
-  trustBadges: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 28,
+  footer: {
+    alignItems: 'center',
   },
-  badge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  badgeText: {
-    fontWeight: '500',
+  footerText: {
+    textAlign: 'center',
+    opacity: 0.8,
   },
 });
+
+export default LockScreen;

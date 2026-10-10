@@ -9,11 +9,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
-  Alert,
 } from 'react-native';
 import {
-  Plus,
   ArrowUpRight,
   ArrowDownLeft,
   KeyRound,
@@ -21,11 +18,14 @@ import {
   CheckSquare,
   Sparkles,
   ArrowLeft,
+  ChevronRight,
+  ShieldCheck,
 } from 'lucide-react-native';
+import type { LucideIcon } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { Modal, Button, Input, Card, Tag, Switch } from '../ui';
+import { Modal, Button, Input, Switch } from '../ui';
 import { CredentialForm } from '../vault/CredentialForm';
 import { TransactionForm } from '../ledger/TransactionForm';
 import { TaskForm } from '../tasks/TaskForm';
@@ -33,6 +33,54 @@ import { dbService } from '../../services/db';
 import { Category, TransactionType, TaskPriority } from '../../types/models';
 
 export type QuickActionType = 'menu' | 'expense' | 'income' | 'vault' | 'note' | 'task';
+
+type CapturableAction = Exclude<QuickActionType, 'menu'>;
+
+interface QuickActionOption {
+  action: CapturableAction;
+  title: string;
+  subtitle: string;
+  icon: LucideIcon;
+  tone: 'danger' | 'success' | 'accent' | 'info' | 'warning';
+}
+
+const QUICK_ACTION_OPTIONS: QuickActionOption[] = [
+  {
+    action: 'expense',
+    title: 'Expense',
+    subtitle: 'Track spending',
+    icon: ArrowUpRight,
+    tone: 'danger',
+  },
+  {
+    action: 'income',
+    title: 'Income',
+    subtitle: 'Add earnings',
+    icon: ArrowDownLeft,
+    tone: 'success',
+  },
+  {
+    action: 'vault',
+    title: 'Credential',
+    subtitle: 'Protect a login',
+    icon: KeyRound,
+    tone: 'accent',
+  },
+  {
+    action: 'note',
+    title: 'Safe note',
+    subtitle: 'Capture an idea',
+    icon: FileText,
+    tone: 'info',
+  },
+  {
+    action: 'task',
+    title: 'Task',
+    subtitle: 'Plan your next step',
+    icon: CheckSquare,
+    tone: 'warning',
+  },
+];
 
 export interface QuickActionsModalProps {
   visible: boolean;
@@ -47,10 +95,11 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
   onDataCreated,
   initialAction = 'menu',
 }) => {
-  const { colors, accent, spacing, typography, radius } = useTheme();
+  const { colors, accent, spacing, typography, radius, isDark } = useTheme();
   const { masterKey } = useAuth();
 
   const [activeView, setActiveView] = useState<QuickActionType>(initialAction);
+  const [lastAction, setLastAction] = useState<CapturableAction | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
@@ -279,120 +328,140 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
     }
   };
 
+  const selectAction = (action: CapturableAction) => {
+    Haptics.selectionAsync().catch(() => {});
+    setLastAction(action);
+    setActiveView(action);
+  };
+
+  const lastActionOption = lastAction
+    ? QUICK_ACTION_OPTIONS.find((option) => option.action === lastAction)
+    : undefined;
+  const LastActionIcon = lastActionOption?.icon;
+
   const renderContent = () => {
     switch (activeView) {
       case 'menu':
         return (
           <View style={styles.menuContainer}>
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                setActiveView('expense');
-              }}
-              style={[styles.menuItem, { backgroundColor: colors.bgSecondary, borderRadius: radius.md }]}
-              accessibilityRole="button"
-              accessibilityLabel="Add Expense"
+            <View
+              style={[
+                styles.menuIntro,
+                {
+                  backgroundColor: isDark ? accent.primaryBgDark : accent.primaryBgLight,
+                  borderColor: accent.primary,
+                  borderRadius: radius.xl,
+                },
+              ]}
             >
-              <View style={[styles.menuIcon, { backgroundColor: colors.dangerBg }]}>
-                <ArrowUpRight size={22} color={colors.danger} />
+              <View
+                style={[
+                  styles.menuIntroIcon,
+                  { backgroundColor: accent.primary, borderRadius: radius.md },
+                ]}
+              >
+                <Sparkles size={18} color={accent.contrastText} />
               </View>
-              <View style={styles.menuText}>
-                <Text style={[styles.menuTitle, { color: colors.textPrimary, fontSize: typography.base }]}>
-                  Log Expense
+              <View style={styles.menuIntroText}>
+                <Text style={[styles.menuIntroTitle, { color: colors.textPrimary, fontSize: typography.base }]}>
+                  Capture it while it’s fresh
                 </Text>
-                <Text style={[styles.menuSub, { color: colors.textTertiary, fontSize: typography.xs }]}>
-                  Record daily spending & budget category
+                <Text style={[styles.menuIntroSub, { color: colors.textSecondary, fontSize: typography.xs }]}>
+                  One calm place for everything you want to remember.
                 </Text>
               </View>
-            </TouchableOpacity>
+              <View
+                style={[
+                  styles.localChip,
+                  {
+                    backgroundColor: colors.bgElevated,
+                    borderColor: colors.borderSubtle,
+                    borderRadius: radius.full,
+                  },
+                ]}
+              >
+                <ShieldCheck size={12} color={accent.primary} />
+                <Text style={[styles.localChipText, { color: colors.textSecondary, fontSize: typography.xs }]}>ON DEVICE</Text>
+              </View>
+            </View>
 
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                setActiveView('income');
-              }}
-              style={[styles.menuItem, { backgroundColor: colors.bgSecondary, borderRadius: radius.md }]}
-              accessibilityRole="button"
-              accessibilityLabel="Add Income"
-            >
-              <View style={[styles.menuIcon, { backgroundColor: colors.successBg }]}>
-                <ArrowDownLeft size={22} color={colors.success} />
-              </View>
-              <View style={styles.menuText}>
-                <Text style={[styles.menuTitle, { color: colors.textPrimary, fontSize: typography.base }]}>
-                  Log Income
-                </Text>
-                <Text style={[styles.menuSub, { color: colors.textTertiary, fontSize: typography.xs }]}>
-                  Record salary, freelance, or earnings
-                </Text>
-              </View>
-            </TouchableOpacity>
+            {lastActionOption && LastActionIcon && (
+              <TouchableOpacity
+                onPress={() => selectAction(lastActionOption.action)}
+                style={[
+                  styles.repeatCard,
+                  {
+                    backgroundColor: colors.bgSecondary,
+                    borderColor: accent.primary,
+                    borderRadius: radius.xl,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel={`Repeat ${lastActionOption.title}`}
+              >
+                <View
+                  style={[
+                    styles.repeatIcon,
+                    { backgroundColor: isDark ? accent.primaryBgDark : accent.primaryBgLight, borderRadius: radius.md },
+                  ]}
+                >
+                  <LastActionIcon size={18} color={accent.primary} />
+                </View>
+                <View style={styles.repeatText}>
+                  <Text style={[styles.repeatEyebrow, { color: accent.primary, fontSize: typography.xs }]}>QUICK REPEAT</Text>
+                  <Text style={[styles.repeatTitle, { color: colors.textPrimary, fontSize: typography.sm }]}>Open {lastActionOption.title}</Text>
+                </View>
+                <ChevronRight size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            )}
 
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                setActiveView('vault');
-              }}
-              style={[styles.menuItem, { backgroundColor: colors.bgSecondary, borderRadius: radius.md }]}
-              accessibilityRole="button"
-              accessibilityLabel="Add Password"
-            >
-              <View style={[styles.menuIcon, { backgroundColor: accent.primaryBgLight }]}>
-                <KeyRound size={22} color={accent.primary} />
-              </View>
-              <View style={styles.menuText}>
-                <Text style={[styles.menuTitle, { color: colors.textPrimary, fontSize: typography.base }]}>
-                  Store Credential
-                </Text>
-                <Text style={[styles.menuSub, { color: colors.textTertiary, fontSize: typography.xs }]}>
-                  Save encrypted account credentials & notes
-                </Text>
-              </View>
-            </TouchableOpacity>
+            <Text style={[styles.menuSectionLabel, { color: colors.textTertiary, fontSize: typography.xs }]}>CREATE NEW</Text>
 
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                setActiveView('note');
-              }}
-              style={[styles.menuItem, { backgroundColor: colors.bgSecondary, borderRadius: radius.md }]}
-              accessibilityRole="button"
-              accessibilityLabel="Add Note"
-            >
-              <View style={[styles.menuIcon, { backgroundColor: colors.infoBg }]}>
-                <FileText size={22} color={colors.info} />
-              </View>
-              <View style={styles.menuText}>
-                <Text style={[styles.menuTitle, { color: colors.textPrimary, fontSize: typography.base }]}>
-                  Safe Markdown Note
-                </Text>
-                <Text style={[styles.menuSub, { color: colors.textTertiary, fontSize: typography.xs }]}>
-                  Write encrypted idea or journal
-                </Text>
-              </View>
-            </TouchableOpacity>
+            <View style={styles.actionGrid}>
+              {QUICK_ACTION_OPTIONS.map((option) => {
+                const ActionIcon = option.icon;
+                const palette = {
+                  danger: { backgroundColor: colors.dangerBg, color: colors.danger },
+                  success: { backgroundColor: colors.successBg, color: colors.success },
+                  accent: {
+                    backgroundColor: isDark ? accent.primaryBgDark : accent.primaryBgLight,
+                    color: accent.primary,
+                  },
+                  info: { backgroundColor: colors.infoBg, color: colors.info },
+                  warning: { backgroundColor: colors.warningBg, color: colors.warning },
+                }[option.tone];
 
-            <TouchableOpacity
-              onPress={() => {
-                Haptics.selectionAsync().catch(() => {});
-                setActiveView('task');
-              }}
-              style={[styles.menuItem, { backgroundColor: colors.bgSecondary, borderRadius: radius.md }]}
-              accessibilityRole="button"
-              accessibilityLabel="Add Task"
-            >
-              <View style={[styles.menuIcon, { backgroundColor: colors.warningBg }]}>
-                <CheckSquare size={22} color={colors.warning} />
-              </View>
-              <View style={styles.menuText}>
-                <Text style={[styles.menuTitle, { color: colors.textPrimary, fontSize: typography.base }]}>
-                  Create Task
-                </Text>
-                <Text style={[styles.menuSub, { color: colors.textTertiary, fontSize: typography.xs }]}>
-                  Set priority & deadline in workflow
-                </Text>
-              </View>
-            </TouchableOpacity>
+                return (
+                  <TouchableOpacity
+                    key={option.action}
+                    onPress={() => selectAction(option.action)}
+                    style={[
+                      styles.actionTile,
+                      {
+                        backgroundColor: colors.bgSecondary,
+                        borderColor: colors.borderSubtle,
+                        borderRadius: radius.xl,
+                      },
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Capture ${option.title}`}
+                  >
+                    <View style={styles.actionTileTopRow}>
+                      <View style={[styles.actionTileIcon, { backgroundColor: palette.backgroundColor, borderRadius: radius.md }]}>
+                        <ActionIcon size={19} color={palette.color} />
+                      </View>
+                      <ChevronRight size={16} color={colors.textMuted} />
+                    </View>
+                    <Text style={[styles.actionTileTitle, { color: colors.textPrimary, fontSize: typography.sm }]}>
+                      {option.title}
+                    </Text>
+                    <Text style={[styles.actionTileSub, { color: colors.textTertiary, fontSize: typography.xs }]}>
+                      {option.subtitle}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
         );
 
@@ -549,7 +618,7 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
       case 'task':
         return 'New Task';
       default:
-        return 'Quick Actions';
+        return 'Quick Capture';
     }
   };
 
@@ -558,7 +627,7 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
       visible={visible}
       onClose={onClose}
       title={getModalTitle()}
-      subtitle="Local-first encrypted entry"
+      subtitle="Private capture • encrypted on device"
       variant="bottomSheet"
     >
       {renderContent()}
@@ -568,31 +637,105 @@ export const QuickActionsModal: React.FC<QuickActionsModalProps> = ({
 
 const styles = StyleSheet.create({
   menuContainer: {
-    paddingVertical: 8,
-    gap: 10,
+    paddingVertical: 4,
+    gap: 12,
   },
-  menuItem: {
+  menuIntro: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 14,
-    minHeight: 64,
+    padding: 12,
+    minHeight: 76,
+    borderWidth: 1,
   },
-  menuIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  menuIntroIcon: {
+    width: 38,
+    height: 38,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
   },
-  menuText: {
+  menuIntroText: {
     flex: 1,
+    paddingHorizontal: 10,
   },
-  menuTitle: {
+  menuIntroTitle: {
+    fontWeight: '800',
+  },
+  menuIntroSub: {
+    marginTop: 3,
+    lineHeight: 16,
+  },
+  localChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderWidth: 1,
+  },
+  localChipText: {
+    fontWeight: '800',
+    letterSpacing: 0.4,
+    marginLeft: 4,
+  },
+  repeatCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    minHeight: 64,
+    borderWidth: 1,
+  },
+  repeatIcon: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  repeatText: {
+    flex: 1,
+    marginHorizontal: 10,
+  },
+  repeatEyebrow: {
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  repeatTitle: {
     fontWeight: '700',
-  },
-  menuSub: {
     marginTop: 2,
+  },
+  menuSectionLabel: {
+    fontWeight: '800',
+    letterSpacing: 1,
+    marginLeft: 2,
+    marginTop: 2,
+  },
+  actionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  actionTile: {
+    width: '48%',
+    minHeight: 118,
+    padding: 12,
+    borderWidth: 1,
+  },
+  actionTileTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  actionTileIcon: {
+    width: 38,
+    height: 38,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionTileTitle: {
+    fontWeight: '800',
+    marginTop: 12,
+  },
+  actionTileSub: {
+    marginTop: 3,
+    lineHeight: 16,
   },
   backLink: {
     flexDirection: 'row',
@@ -603,26 +746,5 @@ const styles = StyleSheet.create({
   backLinkText: {
     fontWeight: '600',
     marginLeft: 6,
-  },
-  formLabel: {
-    fontWeight: '600',
-  },
-  pwdRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  generateBtn: {
-    width: 48,
-    height: 48,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 8,
-    marginTop: 24,
-  },
-  priorityRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
   },
 });

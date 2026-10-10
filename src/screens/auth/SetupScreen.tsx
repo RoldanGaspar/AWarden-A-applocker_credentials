@@ -1,6 +1,6 @@
 /**
- * Life OS & Vault - Master Password Setup Wizard
- * First-launch onboarding with Master Password, Strength Meter, Recovery Code confirmation, and Biometrics
+ * AWarden - Security Setup Wizard
+ * 3-Step Guided Security Narrative with AWarden Guardian Mark
  */
 
 import React, { useState, useMemo } from 'react';
@@ -12,22 +12,34 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native';
-import { ShieldCheck, Copy, Check, Lock, KeyRound, Fingerprint, Info } from 'lucide-react-native';
+import {
+  ShieldCheck,
+  Copy,
+  Check,
+  Lock,
+  KeyRound,
+  Fingerprint,
+  Sparkles,
+  Shield,
+  CheckCircle2,
+  AlertTriangle,
+  ArrowRight,
+  ArrowLeft,
+} from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../theme/ThemeContext';
-import { Button, Input, Card, ProgressBar, Switch } from '../../components/ui';
+import { Button, Input, Card, ProgressBar, Switch, AWardenMark } from '../../components/ui';
 import { CryptoService } from '../../services/cryptoService';
 
 export const SetupScreen: React.FC = () => {
   const { colors, accent, spacing, typography, radius } = useTheme();
   const { setupMasterPassword, biometricsAvailable } = useAuth();
 
-  // Wizard state: 1 = Password, 2 = Recovery Code, 3 = Confirmation & Biometrics
-  const [step, setStep] = useState<1 | 2>(1);
+  // Wizard state: 1 = Password, 2 = Biometrics & Hardware, 3 = Emergency Recovery Cipher
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [enableBiometrics, setEnableBiometrics] = useState(true);
@@ -64,10 +76,16 @@ export const SetupScreen: React.FC = () => {
       return;
     }
 
+    setStep(2);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+  };
+
+  const handleStep2Next = () => {
+    setError('');
     // Pre-generate recovery code for preview step
     const code = CryptoService.generateRecoveryCode();
     setGeneratedRecoveryCode(code);
-    setStep(2);
+    setStep(3);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
   };
 
@@ -80,7 +98,7 @@ export const SetupScreen: React.FC = () => {
 
   const handleCompleteSetup = async () => {
     if (!confirmedSaved) {
-      setError('Please confirm that you have securely saved your recovery code.');
+      setError('Please confirm that you have securely saved your emergency recovery cipher.');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
       return;
     }
@@ -92,7 +110,7 @@ export const SetupScreen: React.FC = () => {
       await setupMasterPassword(password, enableBiometrics && biometricsAvailable);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     } catch (e: any) {
-      setError(e?.message || 'Failed to initialize vault');
+      setError(e?.message || 'Failed to initialize AWarden vault');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
     } finally {
       setIsLoading(false);
@@ -108,46 +126,54 @@ export const SetupScreen: React.FC = () => {
         contentContainerStyle={[styles.scrollContent, { paddingHorizontal: spacing.xl }]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header Branding */}
+        {/* Header AWarden Branding */}
         <View style={styles.header}>
-          <View
-            style={[
-              styles.iconWrapper,
-              { backgroundColor: accent.primaryBgDark, borderColor: accent.primary },
-            ]}
-          >
-            <ShieldCheck size={38} color={accent.primary} />
+          <View style={styles.owlWrapper}>
+            <AWardenMark size={116} />
           </View>
-          <Text style={[styles.title, { color: colors.textPrimary, fontSize: typography.xl }]}>
-            Welcome to Life OS & Vault
+
+          <Text style={[styles.title, { color: colors.textPrimary, fontSize: typography.xxl }]}>
+            AWarden
           </Text>
           <Text style={[styles.subtitle, { color: colors.textTertiary, fontSize: typography.sm }]}>
-            {step === 1 ? 'Step 1 of 2: Create Master Password' : 'Step 2 of 2: Emergency Recovery Code'}
+            {step === 1
+              ? 'Act 1: Awaken Your Guardian'
+              : step === 2
+              ? 'Act 2: Hardware Shield Binding'
+              : 'Act 3: The Ancient Cipher'}
           </Text>
+
+          {/* Progress Dots */}
+          <View style={styles.stepDotsRow}>
+            {[1, 2, 3].map((s) => (
+              <View
+                key={s}
+                style={[
+                  styles.stepDot,
+                  {
+                    backgroundColor: step >= s ? accent.primary : colors.bgTertiary,
+                    width: step === s ? 24 : 8,
+                    borderRadius: radius.full,
+                  },
+                ]}
+              />
+            ))}
+          </View>
         </View>
 
-        {step === 1 ? (
+        {/* STEP 1: Master Password */}
+        {step === 1 && (
           <Card variant="elevated" style={styles.card}>
-            <Text
-              style={[
-                styles.sectionHeading,
-                { color: colors.textPrimary, fontSize: typography.md, marginBottom: spacing.xs },
-              ]}
-            >
-              Set Master Encryption Password
+            <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.lg }]}>
+              Create Master Password
             </Text>
-            <Text
-              style={[
-                styles.description,
-                { color: colors.textTertiary, fontSize: typography.sm, marginBottom: spacing.md },
-              ]}
-            >
-              Your master password derives your local AES-256 encryption key. It never leaves your device.
+            <Text style={[styles.cardSubtitle, { color: colors.textTertiary, fontSize: typography.xs, marginBottom: spacing.md }]}>
+              AWarden derives an AES-256 key from this password. It never leaves your device.
             </Text>
 
             <Input
-              label="Master Password"
-              placeholder="Enter master password (min 8 chars)"
+              label="Master Password *"
+              placeholder="Minimum 8 characters"
               value={password}
               onChangeText={(text) => {
                 setPassword(text);
@@ -157,28 +183,27 @@ export const SetupScreen: React.FC = () => {
               leftIcon={<Lock size={18} color={colors.textSecondary} />}
             />
 
+            {/* Password Strength Meter */}
             {password.length > 0 && (
-              <View style={styles.strengthContainer}>
+              <View style={styles.strengthBox}>
                 <View style={styles.strengthHeader}>
-                  <Text style={[styles.strengthLabel, { color: colors.textSecondary, fontSize: typography.xs }]}>
-                    Strength: <Text style={{ fontWeight: '700' }}>{strength.label}</Text>
+                  <Text style={[styles.strengthLabel, { color: colors.textTertiary, fontSize: typography.xs }]}>
+                    Key Entropy: {strength.label}
                   </Text>
-                  <Text style={[styles.strengthFeedback, { color: colors.textTertiary, fontSize: typography.xs }]}>
-                    {strength.feedback}
+                  <Text style={[styles.strengthScore, { color: colors.textSecondary, fontSize: typography.xs }]}>
+                    {Math.round(strengthProgress * 100)}%
                   </Text>
                 </View>
-                <ProgressBar
-                  progress={strengthProgress}
-                  status={strengthStatus}
-                  height={6}
-                  style={{ marginTop: 6, marginBottom: 12 }}
-                />
+                <ProgressBar progress={strengthProgress} status={strengthStatus} style={{ height: 5 }} />
+                <Text style={[styles.strengthFeedback, { color: colors.textMuted, fontSize: 11 }]}>
+                  {strength.feedback}
+                </Text>
               </View>
             )}
 
             <Input
-              label="Confirm Master Password"
-              placeholder="Re-enter master password"
+              label="Confirm Master Password *"
+              placeholder="Re-enter your master password"
               value={confirmPassword}
               onChangeText={(text) => {
                 setConfirmPassword(text);
@@ -187,97 +212,144 @@ export const SetupScreen: React.FC = () => {
               isPassword
               leftIcon={<Lock size={18} color={colors.textSecondary} />}
               errorText={error}
+              returnKeyType="next"
+              onSubmitEditing={handleStep1Next}
             />
 
             <Button
-              title="Continue to Recovery Code"
+              title="Continue to Hardware Shield"
               onPress={handleStep1Next}
               variant="primary"
               fullWidth
+              iconRight={<ArrowRight size={16} color="#FFFFFF" />}
               style={{ marginTop: spacing.sm }}
             />
           </Card>
-        ) : (
+        )}
+
+        {/* STEP 2: Biometrics & Hardware */}
+        {step === 2 && (
           <Card variant="elevated" style={styles.card}>
-            <View style={[styles.warningBox, { backgroundColor: colors.warningBg, borderRadius: radius.md }]}>
-              <Info size={20} color={colors.warning} style={{ marginRight: 8 }} />
-              <Text style={[styles.warningBoxText, { color: colors.warning, fontSize: typography.xs }]}>
-                If you forget your master password, this recovery code is the ONLY way to regain access to your vault.
+            <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.lg }]}>
+              Hardware Security Binding
+            </Text>
+            <Text style={[styles.cardSubtitle, { color: colors.textTertiary, fontSize: typography.xs, marginBottom: spacing.md }]}>
+              Bind your encryption key to the device's secure hardware enclave.
+            </Text>
+
+            {/* Trust Checklist */}
+            <View style={[styles.trustBox, { backgroundColor: colors.bgSecondary, borderRadius: radius.md }]}>
+              <View style={styles.trustItem}>
+                <CheckCircle2 size={16} color={colors.success} style={{ marginRight: 8 }} />
+                <Text style={[styles.trustText, { color: colors.textPrimary, fontSize: typography.xs }]}>
+                  100% Zero-Cloud Storage (SQLite + WAL)
+                </Text>
+              </View>
+              <View style={styles.trustItem}>
+                <CheckCircle2 size={16} color={colors.success} style={{ marginRight: 8 }} />
+                <Text style={[styles.trustText, { color: colors.textPrimary, fontSize: typography.xs }]}>
+                  PBKDF2 Key Derivation (30k Iterations)
+                </Text>
+              </View>
+              <View style={styles.trustItem}>
+                <CheckCircle2 size={16} color={colors.success} style={{ marginRight: 8 }} />
+                <Text style={[styles.trustText, { color: colors.textPrimary, fontSize: typography.xs }]}>
+                  Hardware Keychain Protection
+                </Text>
+              </View>
+            </View>
+
+            {biometricsAvailable ? (
+              <View style={[styles.switchRow, { borderColor: colors.borderSubtle, borderRadius: radius.md }]}>
+                <View style={styles.switchInfo}>
+                  <Text style={[styles.switchTitle, { color: colors.textPrimary, fontSize: typography.sm }]}>
+                    Enable Biometric Unlock
+                  </Text>
+                  <Text style={[styles.switchDesc, { color: colors.textTertiary, fontSize: typography.xs }]}>
+                    Quickly unlock using Face ID or Fingerprint
+                  </Text>
+                </View>
+                <Switch value={enableBiometrics} onValueChange={setEnableBiometrics} />
+              </View>
+            ) : (
+              <View style={[styles.noticeBox, { backgroundColor: colors.bgTertiary, borderRadius: radius.md }]}>
+                <Text style={[styles.noticeText, { color: colors.textTertiary, fontSize: typography.xs }]}>
+                  Biometric hardware not detected on this device. Master password will be used for unlocking.
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.navRow}>
+              <Button
+                title="Back"
+                variant="secondary"
+                onPress={() => setStep(1)}
+                iconLeft={<ArrowLeft size={16} color={colors.textPrimary} />}
+                style={{ flex: 1, marginRight: spacing.sm }}
+              />
+              <Button
+                title="Next: Emergency Key"
+                variant="primary"
+                onPress={handleStep2Next}
+                iconRight={<ArrowRight size={16} color="#FFFFFF" />}
+                style={{ flex: 2 }}
+              />
+            </View>
+          </Card>
+        )}
+
+        {/* STEP 3: Emergency Recovery Cipher */}
+        {step === 3 && (
+          <Card variant="elevated" style={styles.card}>
+            <Text style={[styles.cardTitle, { color: colors.textPrimary, fontSize: typography.lg }]}>
+              The Ancient Recovery Cipher
+            </Text>
+            <Text style={[styles.cardSubtitle, { color: colors.textTertiary, fontSize: typography.xs, marginBottom: spacing.sm }]}>
+              Because AWarden has zero cloud recovery, this 25-character key is your ONLY safeguard if you forget your master password.
+            </Text>
+
+            <View
+              style={[
+                styles.warningBanner,
+                { backgroundColor: colors.warningBg, borderColor: colors.warning, borderRadius: radius.md },
+              ]}
+            >
+              <AlertTriangle size={16} color={colors.warning} style={{ marginRight: 8 }} />
+              <Text style={[styles.warningText, { color: colors.warning, fontSize: typography.xs }]}>
+                Save this key offline in a safe physical place. It cannot be recovered later without access!
               </Text>
             </View>
 
-            <Text
-              style={[
-                styles.sectionHeading,
-                { color: colors.textPrimary, fontSize: typography.md, marginTop: spacing.md, marginBottom: spacing.xs },
-              ]}
-            >
-              Your Recovery Code
-            </Text>
-
-            {/* Recovery Code Box */}
-            <View
-              style={[
-                styles.codeBox,
-                {
-                  backgroundColor: colors.bgSecondary,
-                  borderColor: accent.primary,
-                  borderRadius: radius.md,
-                },
-              ]}
-            >
+            {/* Cipher Code Parchment Box */}
+            <Card variant="outlined" style={[styles.codeBox, { backgroundColor: colors.bgTertiary }]}>
               <Text
                 style={[
                   styles.codeText,
-                  { color: accent.primary, fontSize: typography.md },
+                  { color: colors.textPrimary, fontSize: typography.base, fontFamily: 'monospace' },
                 ]}
                 selectable
               >
                 {generatedRecoveryCode}
               </Text>
+            </Card>
 
-              <TouchableOpacity
-                onPress={handleCopyRecoveryCode}
-                style={[
-                  styles.copyBtn,
-                  { backgroundColor: copiedCode ? colors.successBg : colors.bgTertiary },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel="Copy recovery code"
-              >
-                {copiedCode ? (
-                  <Check size={16} color={colors.success} />
-                ) : (
-                  <Copy size={16} color={colors.textPrimary} />
-                )}
-                <Text
-                  style={[
-                    styles.copyBtnText,
-                    { color: copiedCode ? colors.success : colors.textPrimary, fontSize: typography.xs },
-                  ]}
-                >
-                  {copiedCode ? 'Copied' : 'Copy'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <Button
+              title={copiedCode ? 'Copied to Clipboard' : 'Copy Recovery Cipher'}
+              iconLeft={copiedCode ? <Check size={16} color="#FFFFFF" /> : <Copy size={16} color="#FFFFFF" />}
+              onPress={handleCopyRecoveryCode}
+              variant={copiedCode ? 'secondary' : 'outline'}
+              fullWidth
+              style={{ marginBottom: spacing.md }}
+            />
 
-            {/* Biometrics Toggle if available */}
-            {biometricsAvailable && (
-              <View style={[styles.switchRow, { borderTopColor: colors.borderSubtle, borderTopWidth: 1, marginTop: spacing.lg }]}>
-                <Switch
-                  label="Enable Biometric Unlock"
-                  subtitle="Use Face ID or Fingerprint for fast daily unlock"
-                  value={enableBiometrics}
-                  onValueChange={setEnableBiometrics}
-                />
-              </View>
-            )}
-
-            {/* Checkbox Confirmation */}
+            {/* Confirmation Checkbox */}
             <TouchableOpacity
-              onPress={() => setConfirmedSaved(!confirmedSaved)}
-              style={styles.checkboxRow}
-              activeOpacity={0.8}
+              onPress={() => {
+                Haptics.selectionAsync().catch(() => {});
+                setConfirmedSaved(!confirmedSaved);
+                if (error) setError('');
+              }}
+              style={[styles.checkboxRow, { minHeight: spacing.minTouchTarget }]}
               accessibilityRole="checkbox"
               accessibilityState={{ checked: confirmedSaved }}
             >
@@ -285,43 +357,51 @@ export const SetupScreen: React.FC = () => {
                 style={[
                   styles.checkbox,
                   {
-                    borderColor: confirmedSaved ? accent.primary : colors.borderMedium,
                     backgroundColor: confirmedSaved ? accent.primary : 'transparent',
+                    borderColor: confirmedSaved ? accent.primary : colors.borderSubtle,
                     borderRadius: radius.xs,
                   },
                 ]}
               >
                 {confirmedSaved && <Check size={14} color="#FFFFFF" />}
               </View>
-              <Text style={[styles.checkboxLabel, { color: colors.textPrimary, fontSize: typography.sm }]}>
-                I have written down or safely backed up my recovery code.
+              <Text style={[styles.checkboxLabel, { color: colors.textPrimary, fontSize: typography.xs }]}>
+                I have securely saved this emergency cipher key in a private offline location.
               </Text>
             </TouchableOpacity>
 
             {error ? (
-              <Text style={[styles.errorText, { color: colors.danger, fontSize: typography.xs }]}>
+              <Text style={{ color: colors.danger, fontSize: typography.xs, marginVertical: 6 }}>
                 {error}
               </Text>
             ) : null}
 
-            <View style={styles.buttonGroup}>
+            <View style={styles.navRow}>
               <Button
                 title="Back"
-                onPress={() => setStep(1)}
                 variant="secondary"
+                onPress={() => setStep(2)}
+                iconLeft={<ArrowLeft size={16} color={colors.textPrimary} />}
                 style={{ flex: 1, marginRight: spacing.sm }}
               />
               <Button
-                title="Complete Setup"
-                onPress={handleCompleteSetup}
+                title="Open AWarden Vault"
                 variant="primary"
+                onPress={handleCompleteSetup}
                 loading={isLoading}
-                disabled={!confirmedSaved}
+                iconRight={<Sparkles size={16} color="#FFFFFF" />}
                 style={{ flex: 2 }}
               />
             </View>
           </Card>
         )}
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <Text style={[styles.footerText, { color: colors.textMuted, fontSize: typography.xs }]}>
+            AWarden • Local-First Personal OS & Vault
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -340,92 +420,121 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
   },
-  iconWrapper: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    marginBottom: 12,
+  owlWrapper: {
+    marginBottom: 8,
   },
   title: {
     fontWeight: '800',
-    textAlign: 'center',
+    letterSpacing: -0.5,
   },
   subtitle: {
-    marginTop: 4,
-    textAlign: 'center',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  stepDotsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+  },
+  stepDot: {
+    height: 8,
   },
   card: {
-    width: '100%',
-    maxWidth: 480,
-    alignSelf: 'center',
+    padding: 22,
+    marginBottom: 16,
   },
-  sectionHeading: {
+  cardTitle: {
     fontWeight: '700',
   },
-  description: {
-    lineHeight: 20,
+  cardSubtitle: {
+    marginTop: 2,
+    lineHeight: 16,
   },
-  strengthContainer: {
-    marginBottom: 8,
+  strengthBox: {
+    marginBottom: 12,
   },
   strengthHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 4,
   },
   strengthLabel: {
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  strengthScore: {
+    fontWeight: '700',
   },
   strengthFeedback: {
+    marginTop: 4,
     fontStyle: 'italic',
   },
-  warningBox: {
-    flexDirection: 'row',
+  trustBox: {
     padding: 12,
-    alignItems: 'center',
-  },
-  warningBoxText: {
-    flex: 1,
-    fontWeight: '500',
-    lineHeight: 18,
-  },
-  codeBox: {
-    borderWidth: 1.5,
-    borderStyle: 'dashed',
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
+    gap: 8,
     marginBottom: 16,
   },
-  codeText: {
-    fontWeight: '700',
-    letterSpacing: 1,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  copyBtn: {
+  trustItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
   },
-  copyBtnText: {
+  trustText: {
     fontWeight: '600',
   },
   switchRow: {
-    paddingTop: 12,
-    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  switchInfo: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  switchTitle: {
+    fontWeight: '600',
+  },
+  switchDesc: {
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  noticeBox: {
+    padding: 12,
+    marginBottom: 16,
+  },
+  noticeText: {
+    lineHeight: 16,
+  },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  warningText: {
+    flex: 1,
+    fontWeight: '600',
+    lineHeight: 16,
+  },
+  codeBox: {
+    padding: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  codeText: {
+    fontWeight: '700',
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 12,
     marginBottom: 16,
+    paddingRight: 8,
   },
   checkbox: {
     width: 22,
@@ -437,15 +546,21 @@ const styles = StyleSheet.create({
   },
   checkboxLabel: {
     flex: 1,
-    fontWeight: '500',
-    lineHeight: 18,
-  },
-  errorText: {
-    marginBottom: 12,
+    lineHeight: 16,
     fontWeight: '500',
   },
-  buttonGroup: {
+  navRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 8,
+  },
+  footer: {
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  footerText: {
+    textAlign: 'center',
   },
 });
+
+export default SetupScreen;

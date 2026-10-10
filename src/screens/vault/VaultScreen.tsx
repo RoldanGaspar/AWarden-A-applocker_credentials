@@ -29,9 +29,10 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { Card, Input, Tag, FAB, Modal, Button, EmptyState } from '../../components/ui';
+import { Card, Input, Tag, FAB, Modal, Button, EmptyState, AnimatedPatternBackground, ScreenEntrance } from '../../components/ui';
 import {
   CredentialCard,
   CredentialForm,
@@ -47,6 +48,7 @@ import { VaultItem, Folder, PasswordHealthReport } from '../../types/models';
 export const VaultScreen: React.FC = () => {
   const { colors, accent, spacing, typography, radius } = useTheme();
   const { masterKey } = useAuth();
+  const isFocused = useIsFocused();
 
   const [items, setItems] = useState<VaultItem[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -157,7 +159,8 @@ export const VaultScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenEntrance style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <AnimatedPatternBackground intensity={0.35} active={isFocused} />
       {/* Top Header & Actions */}
       <View style={[styles.topBar, { paddingHorizontal: spacing.lg, paddingTop: spacing.md }]}>
         <Input
@@ -402,14 +405,14 @@ export const VaultScreen: React.FC = () => {
         }
         ListEmptyComponent={
           <EmptyState
-            icon={<KeyRound size={48} color={accent.primary} />}
-            title={hasActiveFilters ? 'No Matching Credentials' : 'Your Vault is Empty'}
+            owlMood="curious"
+            title={hasActiveFilters ? 'No Matching Credentials' : 'The Vault Nest is Empty'}
             description={
               hasActiveFilters
-                ? 'Try adjusting your search terms or clearing active filters.'
-                : 'All logins, passwords, and secret recovery questions stored here are encrypted with AES-256.'
+                ? 'AWarden searched all encrypted branches. Try adjusting your search query.'
+                : 'No secrets guarded yet. Add your first credential to keep it safe under AWarden’s watch.'
             }
-            actionTitle={hasActiveFilters ? 'Clear Filters' : 'Add First Credential'}
+            actionTitle={hasActiveFilters ? 'Clear Filters' : 'Guard First Credential'}
             onActionPress={hasActiveFilters ? clearAllFilters : () => setIsAddModalVisible(true)}
             style={{ marginTop: 40 }}
           />
@@ -516,7 +519,7 @@ export const VaultScreen: React.FC = () => {
           setSelectedTag(tag);
         }}
       />
-    </View>
+    </ScreenEntrance>
   );
 };
 

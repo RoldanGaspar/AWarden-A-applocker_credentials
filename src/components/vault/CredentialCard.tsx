@@ -8,7 +8,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Alert,
 } from 'react-native';
 import {
@@ -23,7 +22,7 @@ import {
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
-import { Card, Tag } from '../ui';
+import { Card, Tag, AnimatedPressable } from '../ui';
 import { VaultItem, Folder } from '../../types/models';
 
 export interface CredentialCardProps {
@@ -77,14 +76,14 @@ export const CredentialCard: React.FC<CredentialCardProps> = ({
     <Card
       variant="outlined"
       style={[styles.card, { borderLeftColor: folderColor, borderLeftWidth: 4 }]}
-      onPress={onPress}
       accessibilityLabel={`Credential for ${item.title}, username ${item.username || 'none'}`}
     >
-      <TouchableOpacity
+      <AnimatedPressable
         onLongPress={handleLongPress}
-        activeOpacity={0.8}
         style={styles.innerTouchable}
         onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Credential for ${item.title}, username ${item.username || 'none'}`}
       >
         <View style={styles.contentRow}>
           {/* Main Info */}
@@ -130,7 +129,7 @@ export const CredentialCard: React.FC<CredentialCardProps> = ({
 
           {/* Right Actions */}
           <View style={styles.rightActions}>
-            <TouchableOpacity
+            <AnimatedPressable
               onPress={(e) => {
                 e.stopPropagation();
                 onToggleFavorite();
@@ -144,9 +143,9 @@ export const CredentialCard: React.FC<CredentialCardProps> = ({
                 color={item.is_favorite ? accent.primary : colors.textMuted}
                 fill={item.is_favorite ? accent.primary : 'transparent'}
               />
-            </TouchableOpacity>
+            </AnimatedPressable>
 
-            <TouchableOpacity
+            <AnimatedPressable
               onPress={(e) => {
                 e.stopPropagation();
                 handleCopyPassword();
@@ -168,10 +167,10 @@ export const CredentialCard: React.FC<CredentialCardProps> = ({
               ) : (
                 <Copy size={16} color={colors.textSecondary} />
               )}
-            </TouchableOpacity>
+            </AnimatedPressable>
           </View>
         </View>
-      </TouchableOpacity>
+      </AnimatedPressable>
     </Card>
   );
 };

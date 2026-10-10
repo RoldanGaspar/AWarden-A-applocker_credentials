@@ -31,11 +31,13 @@ import {
   Moon,
   Smartphone,
   Globe,
+  Sparkles,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { useIsFocused } from '@react-navigation/native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
-import { Card, SectionHeader, Switch, Button } from '../../components/ui';
+import { Card, SectionHeader, Switch, Button, AnimatedPatternBackground, ScreenEntrance } from '../../components/ui';
 import {
   AccentPicker,
   ChangeMasterPasswordModal,
@@ -67,12 +69,16 @@ export const SettingsScreen: React.FC = () => {
     autoLockTimeout,
     setAutoLockTimeoutSetting,
     lockNow,
+    masterKey,
   } = useAuth();
+  const isFocused = useIsFocused();
 
   // Settings State
   const [offlineIcons, setOfflineIcons] = useState(false);
   const [clipboardAutoClear, setClipboardAutoClear] = useState(true);
   const [lastBackupTime, setLastBackupTime] = useState<string | null>(null);
+  const [demoDataLoadedAt, setDemoDataLoadedAt] = useState<string | null>(null);
+  const [isLoadingDemoData, setIsLoadingDemoData] = useState(false);
 
   // Modals
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -88,10 +94,11 @@ export const SettingsScreen: React.FC = () => {
 
   const loadAppSettings = async () => {
     try {
-      const [offline, clip, lastBackup] = await Promise.all([
+      const [offline, clip, lastBackup, demoLoadedAt] = await Promise.all([
         dbService.getSetting('offline_icons'),
         dbService.getSetting('clipboard_autoclear'),
         dbService.getSetting('last_backup_timestamp'),
+        dbService.getSetting('demo_data_loaded_at'),
       ]);
 
       if (offline !== null) setOfflineIcons(offline === 'true');
@@ -99,9 +106,45 @@ export const SettingsScreen: React.FC = () => {
       if (lastBackup !== null) {
         setLastBackupTime(new Date(parseInt(lastBackup, 10)).toLocaleDateString());
       }
+      if (demoLoadedAt !== null) {
+        setDemoDataLoadedAt(new Date(parseInt(demoLoadedAt, 10)).toLocaleDateString());
+      }
     } catch (e) {
       console.warn('Failed to load app settings:', e);
     }
+  };
+
+  const handleLoadDemoData = () => {
+    if (!masterKey || isLoadingDemoData) return;
+
+    Alert.alert(
+      'Load demo data?',
+      'Adds sample credentials, transactions, notes, and tasks for previewing the interface. Your existing records will not be changed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Add samples',
+          onPress: async () => {
+            setIsLoadingDemoData(true);
+            try {
+              const result = await dbService.seedDemoData(masterKey);
+              setDemoDataLoadedAt(new Date().toLocaleDateString());
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+
+              const message =
+                result.total > 0
+                  ? `Added ${result.total} sample records: ${result.vaultItems} credentials, ${result.transactions} transactions, ${result.notes} notes, and ${result.tasks} tasks.`
+                  : 'The demo records are already loaded. No duplicates were added.';
+              Alert.alert('Demo data ready', message);
+            } catch (e: any) {
+              Alert.alert('Could not load demo data', e?.message || 'Please try again.');
+            } finally {
+              setIsLoadingDemoData(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleToggleOfflineIcons = async (value: boolean) => {
@@ -142,7 +185,8 @@ export const SettingsScreen: React.FC = () => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+    <ScreenEntrance style={[styles.container, { backgroundColor: colors.bgPrimary }]}>
+      <AnimatedPatternBackground intensity={0.35} active={isFocused} />
       <ScrollView contentContainerStyle={[styles.scrollContent, { padding: spacing.lg, paddingBottom: 120 }]}>
         {/* ========================================== */}
         {/* 1. APPEARANCE SETTINGS */}
@@ -372,7 +416,47 @@ export const SettingsScreen: React.FC = () => {
         </Card>
 
         {/* ========================================== */}
-        {/* 4. ACTIVITY & AUDIT TRAIL */}
+        {/* 4. DESIGN PREVIEW DATA */}
+        {/* ========================================== */}
+        <SectionHeader title="Design Preview" />
+
+        <Card variant="outlined" style={styles.cardSection}>
+          <View style={styles.demoIntroRow}>
+            <View style={[styles.iconBadge, { backgroundColor: colors.bgTertiary, borderRadius: radius.xs }]}>
+              <Sparkles size={18} color={accent.primary} />
+            </View>
+            <View style={styles.linkInfo}>
+              <Text style={[styles.linkTitle, { color: colors.textPrimary, fontSize: typography.sm }]}>
+                Load sample workspace
+              </Text>
+              <Text style={[styles.linkDesc, { color: colors.textTertiary, fontSize: typography.xs }]}>
+                Populate every main screen with realistic-looking local demo records.
+              </Text>
+            </View>
+          </View>
+
+          <Button
+            title={isLoadingDemoData ? 'Loading samples…' : 'Load demo data'}
+            variant="outline"
+            size="md"
+            loading={isLoadingDemoData}
+            disabled={!masterKey}
+            iconLeft={<Sparkles size={16} color={accent.primary} />}
+            onPress={handleLoadDemoData}
+            fullWidth
+            style={{ marginTop: spacing.md }}
+            accessibilityLabel="Load local demo data"
+          />
+
+          <Text style={[styles.demoMeta, { color: colors.textMuted, fontSize: typography.xs }]}>
+            {demoDataLoadedAt
+              ? `Last loaded ${demoDataLoadedAt}. Loading again will not duplicate samples.`
+              : 'Adds encrypted sample records without replacing your own data.'}
+          </Text>
+        </Card>
+
+        {/* ========================================== */}
+        {/* 5. ACTIVITY & AUDIT TRAIL */}
         {/* ========================================== */}
         <SectionHeader title="Privacy & Security Audit" />
 
@@ -401,7 +485,7 @@ export const SettingsScreen: React.FC = () => {
         </Card>
 
         {/* ========================================== */}
-        {/* 5. DANGER ZONE */}
+        {/* 6. DANGER ZONE */}
         {/* ========================================== */}
         <SectionHeader title="Danger Zone" />
 
@@ -430,7 +514,7 @@ export const SettingsScreen: React.FC = () => {
         </Card>
 
         {/* ========================================== */}
-        {/* 6. ABOUT & LOG OUT */}
+        {/* 7. ABOUT & LOG OUT */}
         {/* ========================================== */}
         <SectionHeader title="About Life OS & Vault" />
 
@@ -487,7 +571,7 @@ export const SettingsScreen: React.FC = () => {
         visible={isDangerModalOpen}
         onClose={() => setIsDangerModalOpen(false)}
       />
-    </View>
+    </ScreenEntrance>
   );
 };
 
@@ -568,6 +652,14 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   aboutCopy: {},
+  demoIntroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  demoMeta: {
+    marginTop: 10,
+    lineHeight: 16,
+  },
 });
 
 export default SettingsScreen;

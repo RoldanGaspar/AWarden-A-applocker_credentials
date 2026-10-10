@@ -8,7 +8,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   Alert,
 } from 'react-native';
 import {
@@ -21,7 +20,7 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../../theme/ThemeContext';
-import { Card, Tag } from '../ui';
+import { Card, Tag, AnimatedPressable } from '../ui';
 import { Note, Folder } from '../../types/models';
 
 export interface NoteCardProps {
@@ -97,14 +96,14 @@ export const NoteCard: React.FC<NoteCardProps> = ({
     <Card
       variant="outlined"
       style={[styles.card, { borderLeftColor: folder ? folder.color : colors.borderSubtle, borderLeftWidth: folder ? 4 : 1 }]}
-      onPress={onPress}
       accessibilityLabel={`Note: ${note.title}, ${plainSnippet ? plainSnippet.slice(0, 50) : 'Empty note'}`}
     >
-      <TouchableOpacity
+      <AnimatedPressable
         onLongPress={handleLongPress}
-        activeOpacity={0.8}
         style={styles.innerTouchable}
         onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={`Note: ${note.title}, ${plainSnippet ? plainSnippet.slice(0, 50) : 'Empty note'}`}
       >
         {/* Header Row: Pin & Favorite */}
         <View style={styles.topRow}>
@@ -125,7 +124,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             )}
           </View>
 
-          <TouchableOpacity
+          <AnimatedPressable
             onPress={(e) => {
               e.stopPropagation();
               onToggleFavorite();
@@ -139,7 +138,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
               color={note.is_favorite ? accent.primary : colors.textMuted}
               fill={note.is_favorite ? accent.primary : 'transparent'}
             />
-          </TouchableOpacity>
+          </AnimatedPressable>
         </View>
 
         {/* Title */}
@@ -184,7 +183,7 @@ export const NoteCard: React.FC<NoteCardProps> = ({
             </Text>
           </View>
         </View>
-      </TouchableOpacity>
+      </AnimatedPressable>
     </Card>
   );
 };

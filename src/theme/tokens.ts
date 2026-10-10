@@ -14,6 +14,8 @@ export interface ColorPalette {
   bgElevated: string;
   bgCard: string;
   bgInput: string;
+  surfaceHighlight: string;
+  surfaceShadow: string;
   
   textPrimary: string;
   textSecondary: string;
@@ -109,12 +111,14 @@ export const ACCENT_PALETTES: Record<AccentName, AccentColorSet> = {
 };
 
 export const LIGHT_THEME: ColorPalette = {
-  bgPrimary: '#F8FAFC',
-  bgSecondary: '#F1F5F9',
-  bgTertiary: '#E2E8F0',
-  bgElevated: '#FFFFFF',
-  bgCard: '#FFFFFF',
-  bgInput: '#F8FAFC',
+  bgPrimary: '#EAF0F7',
+  bgSecondary: '#E4EBF3',
+  bgTertiary: '#D9E2ED',
+  bgElevated: '#F7F9FC',
+  bgCard: '#EEF3F8',
+  bgInput: '#E7EDF5',
+  surfaceHighlight: '#FFFFFF',
+  surfaceShadow: '#C7D1DE',
   
   textPrimary: '#0F172A',
   textSecondary: '#475569',
@@ -136,12 +140,14 @@ export const LIGHT_THEME: ColorPalette = {
 };
 
 export const DARK_THEME: ColorPalette = {
-  bgPrimary: '#090D16',
-  bgSecondary: '#111827',
-  bgTertiary: '#1F2937',
-  bgElevated: '#172033',
-  bgCard: '#131C2E',
-  bgInput: '#0E1624',
+  bgPrimary: '#0C1320',
+  bgSecondary: '#111B2B',
+  bgTertiary: '#1B2940',
+  bgElevated: '#18253A',
+  bgCard: '#142035',
+  bgInput: '#0F1A2C',
+  surfaceHighlight: '#263B5A',
+  surfaceShadow: '#050A13',
   
   textPrimary: '#F9FAFB',
   textSecondary: '#D1D5DB',
